@@ -68,7 +68,6 @@ Le flux Google Drive utilise soit un client OAuth configuré une fois côté plu
 * Ajout d’un provider S3 compatible pour les sauvegardes cloud
 * Ajout d’une restauration locale depuis les archives stockées sur le serveur
 * Rétention automatique sur la destination S3 compatible
-*** Add File: c:\Users\imaur\Desktop\360tranquilite\GOOGLE_DRIVE_CONNECTOR.md
 # Connecteur Google Drive central
 
 Ce document décrit le contrat attendu pour brancher 360 Tranquillité à un connecteur central Google Drive de type UpdraftPlus.
