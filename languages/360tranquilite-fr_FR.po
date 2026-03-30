@@ -1,0 +1,48 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: 360 Tranquillite\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Domain: 360tranquilite\n"
+
+msgid "Tableau de bord"
+msgstr "Tableau de bord"
+
+msgid "Pare-feu"
+msgstr "Pare-feu"
+
+msgid "Connexion"
+msgstr "Connexion"
+
+msgid "Sauvegardes"
+msgstr "Sauvegardes"
+
+msgid "Mises a jour"
+msgstr "Mises a jour"
+
+msgid "Purge Medias"
+msgstr "Purge Medias"
+
+msgid "Boite a Outils Dev"
+msgstr "Boite a Outils Dev"
+
+msgid "Avance"
+msgstr "Avance"
+
+msgid "A propos"
+msgstr "A propos"
+
+msgid "Dupliquer"
+msgstr "Dupliquer"
+
+msgid "Acces refuse."
+msgstr "Acces refuse."
+
+msgid "Contenu introuvable."
+msgstr "Contenu introuvable."
+
+msgid "Duplication impossible."
+msgstr "Duplication impossible."

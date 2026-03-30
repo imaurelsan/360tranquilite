@@ -1,0 +1,27 @@
+# ============================================================
+# Dossiers de build et temporaires
+# ============================================================
+
+# Fichiers/dossiers sensibles a ne jamais publier
+forensic-report/
+forensic-highsignal.txt
+connector/
+GOOGLE_DRIVE_CONNECTOR.md
+CONNECTOR_INSTALL_YAUREL.md
+PROJECT_CONTEXT_RECOVERY.md
+RELEASE_CHECKLIST.md
+
+# ZIP de distribution (généré par le script de build)
+dist/
+
+# Sauvegardes locales du site
+360tranquilite-backup-full-*/
+
+# ============================================================
+# Fichiers système
+# ============================================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log

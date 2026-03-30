@@ -1,0 +1,312 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: 360 Tranquillite\n"
+"POT-Creation-Date: 2026-03-28 00:00+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Domain: 360tranquilite\n"
+
+msgid "Tableau de bord"
+msgstr ""
+
+msgid "Pare-feu"
+msgstr ""
+
+msgid "Connexion"
+msgstr ""
+
+msgid "Sauvegardes"
+msgstr ""
+
+msgid "Mises a jour"
+msgstr ""
+
+msgid "Purge Medias"
+msgstr ""
+
+msgid "Boite a Outils Dev"
+msgstr ""
+
+msgid "Avance"
+msgstr ""
+
+msgid "A propos"
+msgstr ""
+
+msgid "Dupliquer"
+msgstr ""
+
+msgid "Acces refuse."
+msgstr ""
+
+msgid "Contenu introuvable."
+msgstr ""
+
+msgid "Duplication impossible."
+msgstr ""
+
+msgid "Ajouter %s"
+msgstr ""
+
+msgid "Modifier %s"
+msgstr ""
+
+msgid "Nouveau %s"
+msgstr ""
+
+msgid "Voir %s"
+msgstr ""
+
+msgid "Tous les %s"
+msgstr ""
+
+msgid "Rechercher %s"
+msgstr ""
+
+msgid "ID"
+msgstr ""
+
+msgid "Image"
+msgstr ""
+
+msgid "Slug"
+msgstr ""
+
+msgid "Modifie"
+msgstr ""
+
+msgid "Maintenance"
+msgstr ""
+
+msgid "Site en maintenance, revenez bientot."
+msgstr ""
+
+msgid "Boite a Outils Dev (style ASE)"
+msgstr ""
+
+msgid "Fonctions utiles pour limiter les plugins additionnels. Activez seulement ce dont vous avez besoin."
+msgstr ""
+
+msgid "Activation globale"
+msgstr ""
+
+msgid "Activer la boite a outils dev"
+msgstr ""
+
+msgid "Contenu"
+msgstr ""
+
+msgid "Duplication de contenu"
+msgstr ""
+
+msgid "Ajouter un lien Dupliquer dans les listes de contenus"
+msgstr ""
+
+msgid "Televersements"
+msgstr ""
+
+msgid "Autoriser SVG"
+msgstr ""
+
+msgid "Autoriser AVIF"
+msgstr ""
+
+msgid "Constructeur CPT/Taxonomies"
+msgstr ""
+
+msgid "Activer l enregistrement dynamique de CPT et taxonomies"
+msgstr ""
+
+msgid "Format JSON: un objet par element. Les erreurs JSON sont ignorees en silence."
+msgstr ""
+
+msgid "CPT (JSON)"
+msgstr ""
+
+msgid "Taxonomies (JSON)"
+msgstr ""
+
+msgid "Interface admin"
+msgstr ""
+
+msgid "Nettoyage admin"
+msgstr ""
+
+msgid "Masquer la plupart des notices admin"
+msgstr ""
+
+msgid "Masquer les widgets natifs du tableau de bord"
+msgstr ""
+
+msgid "Colonnes admin"
+msgstr ""
+
+msgid "Activer les colonnes personnalisees"
+msgstr ""
+
+msgid "Types de contenus (CSV)"
+msgstr ""
+
+msgid "Exemple: post,page,resource"
+msgstr ""
+
+msgid "Afficher la colonne ID"
+msgstr ""
+
+msgid "Afficher la colonne image"
+msgstr ""
+
+msgid "Afficher la colonne slug"
+msgstr ""
+
+msgid "Afficher la colonne date de modification"
+msgstr ""
+
+msgid "Connexion / Deconnexion"
+msgstr ""
+
+msgid "Redirection apres connexion"
+msgstr ""
+
+msgid "Activer la redirection post-login"
+msgstr ""
+
+msgid "Redirection apres deconnexion"
+msgstr ""
+
+msgid "Activer la redirection post-logout"
+msgstr ""
+
+msgid "SMTP"
+msgstr ""
+
+msgid "Configuration SMTP"
+msgstr ""
+
+msgid "Activer SMTP"
+msgstr ""
+
+msgid "Authentification SMTP"
+msgstr ""
+
+msgid "Serveur SMTP"
+msgstr ""
+
+msgid "Port"
+msgstr ""
+
+msgid "Chiffrement"
+msgstr ""
+
+msgid "Aucun"
+msgstr ""
+
+msgid "Utilisateur SMTP"
+msgstr ""
+
+msgid "Mot de passe SMTP"
+msgstr ""
+
+msgid "Laissez vide pour conserver le mot de passe existant."
+msgstr ""
+
+msgid "Email expediteur"
+msgstr ""
+
+msgid "Nom expediteur"
+msgstr ""
+
+msgid "Code personnalise"
+msgstr ""
+
+msgid "CSS Admin"
+msgstr ""
+
+msgid "CSS Frontend"
+msgstr ""
+
+msgid "Insertion HEAD"
+msgstr ""
+
+msgid "Insertion FOOTER"
+msgstr ""
+
+msgid "Securite / Optimisation"
+msgstr ""
+
+msgid "Obfuscation email"
+msgstr ""
+
+msgid "Obfusquer les emails trouves dans le contenu"
+msgstr ""
+
+msgid "Revisions"
+msgstr ""
+
+msgid "0 desactive les revisions."
+msgstr ""
+
+msgid "Normal"
+msgstr ""
+
+msgid "Reduit"
+msgstr ""
+
+msgid "Minimal (forte reduction)"
+msgstr ""
+
+msgid "Mode maintenance"
+msgstr ""
+
+msgid "Activer le mode maintenance"
+msgstr ""
+
+msgid "Langue du plugin"
+msgstr ""
+
+msgid "Langue"
+msgstr ""
+
+msgid "Automatique (langue WordPress)"
+msgstr ""
+
+msgid "Francais"
+msgstr ""
+
+msgid "Selectionnez la langue forcee du plugin ou laissez automatique."
+msgstr ""
+
+msgid "Perimetre implemente maintenant"
+msgstr ""
+
+msgid "Duplication de contenus"
+msgstr ""
+
+msgid "SVG / AVIF upload"
+msgstr ""
+
+msgid "Constructeur CPT/Taxonomies JSON"
+msgstr ""
+
+msgid "SMTP Manager"
+msgstr ""
+
+msgid "Colonnes admin configurables"
+msgstr ""
+
+msgid "Masquage notices admin + widgets dashboard natifs"
+msgstr ""
+
+msgid "Redirections login / logout"
+msgstr ""
+
+msgid "Snippets CSS admin/frontend + injection head/footer"
+msgstr ""
+
+msgid "Gestion robots.txt, ads.txt, app-ads.txt"
+msgstr ""
+
+msgid "Revisions + Heartbeat + obfuscation d emails"
+msgstr ""

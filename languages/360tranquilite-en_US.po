@@ -1,0 +1,153 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: 360 Tranquillite\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: 360tranquilite\n"
+
+msgid "Tableau de bord"
+msgstr "Dashboard"
+
+msgid "Pare-feu"
+msgstr "Firewall"
+
+msgid "Connexion"
+msgstr "Login"
+
+msgid "Sauvegardes"
+msgstr "Backups"
+
+msgid "Mises a jour"
+msgstr "Updates"
+
+msgid "Purge Medias"
+msgstr "Media Cleanup"
+
+msgid "Boite a Outils Dev"
+msgstr "Dev Toolkit"
+
+msgid "Avance"
+msgstr "Advanced"
+
+msgid "A propos"
+msgstr "About"
+
+msgid "Boite a Outils Dev (style ASE)"
+msgstr "Dev Toolkit (ASE style)"
+
+msgid "Fonctions utiles pour limiter les plugins additionnels. Activez seulement ce dont vous avez besoin."
+msgstr "Useful features to reduce extra plugins. Enable only what you need."
+
+msgid "Activation globale"
+msgstr "Global enable"
+
+msgid "Activer la boite a outils dev"
+msgstr "Enable dev toolkit"
+
+msgid "Constructeur CPT/Taxonomies"
+msgstr "CPT/Taxonomy builder"
+
+msgid "Activer l enregistrement dynamique de CPT et taxonomies"
+msgstr "Enable dynamic CPT and taxonomy registration"
+
+msgid "Format JSON: un objet par element. Les erreurs JSON sont ignorees en silence."
+msgstr "JSON format: one object per item. Invalid JSON entries are silently ignored."
+
+msgid "CPT (JSON)"
+msgstr "CPT (JSON)"
+
+msgid "Taxonomies (JSON)"
+msgstr "Taxonomies (JSON)"
+
+msgid "Colonnes admin"
+msgstr "Admin columns"
+
+msgid "Activer les colonnes personnalisees"
+msgstr "Enable custom columns"
+
+msgid "Types de contenus (CSV)"
+msgstr "Post types (CSV)"
+
+msgid "Exemple: post,page,resource"
+msgstr "Example: post,page,resource"
+
+msgid "Afficher la colonne ID"
+msgstr "Show ID column"
+
+msgid "Afficher la colonne image"
+msgstr "Show image column"
+
+msgid "Afficher la colonne slug"
+msgstr "Show slug column"
+
+msgid "Afficher la colonne date de modification"
+msgstr "Show modified date column"
+
+msgid "SMTP"
+msgstr "SMTP"
+
+msgid "Configuration SMTP"
+msgstr "SMTP configuration"
+
+msgid "Activer SMTP"
+msgstr "Enable SMTP"
+
+msgid "Authentification SMTP"
+msgstr "SMTP authentication"
+
+msgid "Serveur SMTP"
+msgstr "SMTP host"
+
+msgid "Port"
+msgstr "Port"
+
+msgid "Chiffrement"
+msgstr "Encryption"
+
+msgid "Aucun"
+msgstr "None"
+
+msgid "Utilisateur SMTP"
+msgstr "SMTP username"
+
+msgid "Mot de passe SMTP"
+msgstr "SMTP password"
+
+msgid "Laissez vide pour conserver le mot de passe existant."
+msgstr "Leave empty to keep the existing password."
+
+msgid "Email expediteur"
+msgstr "From email"
+
+msgid "Nom expediteur"
+msgstr "From name"
+
+msgid "ID"
+msgstr "ID"
+
+msgid "Image"
+msgstr "Image"
+
+msgid "Slug"
+msgstr "Slug"
+
+msgid "Modifie"
+msgstr "Modified"
+
+msgid "Perimetre implemente maintenant"
+msgstr "Implemented scope now"
+
+msgid "Constructeur CPT/Taxonomies JSON"
+msgstr "JSON CPT/Taxonomy builder"
+
+msgid "SMTP Manager"
+msgstr "SMTP manager"
+
+msgid "Colonnes admin configurables"
+msgstr "Configurable admin columns"
+
+msgid "Selectionnez la langue forcee du plugin ou laissez automatique."
+msgstr "Select a forced plugin language or keep automatic mode."
