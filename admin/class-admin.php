@@ -63,6 +63,7 @@ class TRQ_Admin {
         add_action( 'wp_ajax_trq_save_backup_settings', [ $this, 'ajax_save_backup_settings' ] );
         add_action( 'wp_ajax_trq_run_backup_now', [ $this, 'ajax_run_backup_now' ] );
         add_action( 'wp_ajax_trq_get_backup_progress', [ $this, 'ajax_get_backup_progress' ] );
+        add_action( 'wp_ajax_trq_cancel_backup', [ $this, 'ajax_cancel_backup' ] );
         add_action( 'admin_post_trq_google_drive_oauth_callback', [ $this, 'handle_google_drive_oauth_callback' ] );
         add_action( 'admin_post_trq_google_drive_connector_callback', [ $this, 'handle_google_drive_connector_callback' ] );
         add_action( 'admin_post_trq_google_drive_disconnect', [ $this, 'handle_google_drive_disconnect' ] );
@@ -160,6 +161,9 @@ class TRQ_Admin {
                 'backupStarting' => 'Lancement de la sauvegarde...',
                 'backupRunning' => 'Sauvegarde en cours...',
                 'backupSaveError' => 'Impossible d’enregistrer les réglages avant la sauvegarde.',
+                'backupCancelling' => 'Demande d’annulation en cours...',
+                'backupCancelRequested' => 'Annulation demandée. La sauvegarde va s’arrêter dès que possible.',
+                'backupCancelError' => 'Impossible de demander l’annulation de la sauvegarde.',
             ],
         ] );
     }
@@ -616,6 +620,21 @@ class TRQ_Admin {
         check_ajax_referer( 'trq_admin', 'nonce' );
 
         wp_send_json_success( TRQ_Backup_Manager::get_instance()->get_backup_progress( true ) );
+    }
+
+    public function ajax_cancel_backup(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Accès non autorisé.' ], 403 );
+        }
+
+        check_ajax_referer( 'trq_admin', 'nonce' );
+
+        $result = TRQ_Backup_Manager::get_instance()->cancel_manual_backup();
+        if ( empty( $result['success'] ) ) {
+            wp_send_json_error( $result, 400 );
+        }
+
+        wp_send_json_success( $result );
     }
 
     // =========================================================================

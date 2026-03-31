@@ -152,12 +152,28 @@
     var $browser = $('.trq-drive-browser');
     var $backupsForm = $('form[data-trq-tab="backups"]').first();
     var $manualBackupForm = $('.trq-manual-backup-form').first();
+    var $runBackupButton = $('#trq-run-backup-now');
+    var $cancelBackupButton = $('#trq-cancel-backup');
     var $backupProgress = $('.trq-backup-progress');
     var $backupProgressFill = $backupProgress.find('.trq-backup-progress-fill');
     var $backupProgressPercent = $backupProgress.find('.trq-backup-progress-percent');
     var $backupProgressText = $backupProgress.find('.trq-backup-progress-text');
     var backupPollTimer = null;
     var manualBackupRequestInFlight = false;
+    var backupCancelRequestInFlight = false;
+
+    function syncBackupButtons(progress) {
+        var running = !!(progress && progress.in_progress);
+
+        if ($runBackupButton.length) {
+            $runBackupButton.prop('disabled', running || manualBackupRequestInFlight);
+        }
+
+        if ($cancelBackupButton.length) {
+            $cancelBackupButton.prop('hidden', !running);
+            $cancelBackupButton.prop('disabled', !running || backupCancelRequestInFlight);
+        }
+    }
 
     function updateBackupProgressUi(progress) {
         if (!$backupProgress.length || !progress) {
@@ -178,6 +194,7 @@
         $backupProgressFill.css('width', percent + '%');
         $backupProgressPercent.text(percent + '%');
         $backupProgressText.text(progress.message || '');
+        syncBackupButtons(progress);
 
         if (!progress.in_progress && !progress.message) {
             $backupProgress.prop('hidden', true);
@@ -375,6 +392,7 @@
                 updateBackupProgressUi({ in_progress: false, percent: 100, message: trqStrings.backupSaveError });
                 $button.prop('disabled', false);
                 manualBackupRequestInFlight = false;
+                syncBackupButtons({ in_progress: false });
                 return;
             }
 
@@ -390,19 +408,73 @@
                     updateBackupProgressUi({ in_progress: false, percent: 100, message: (response && response.data && response.data.message) ? response.data.message : trqStrings.backupRunning });
                     $button.prop('disabled', false);
                     manualBackupRequestInFlight = false;
+                    syncBackupButtons({ in_progress: false });
                 }
             }).fail(function () {
                 stopBackupPolling();
                 updateBackupProgressUi({ in_progress: false, percent: 100, message: trqStrings.backupRunning });
                 $button.prop('disabled', false);
                 manualBackupRequestInFlight = false;
+                syncBackupButtons({ in_progress: false });
             });
         }).fail(function () {
             updateBackupProgressUi({ in_progress: false, percent: 100, message: trqStrings.backupSaveError });
             $button.prop('disabled', false);
             manualBackupRequestInFlight = false;
+            syncBackupButtons({ in_progress: false });
         });
     }
+
+    $(document).on('click', '#trq-cancel-backup', function (e) {
+        if (backupCancelRequestInFlight || typeof TRQ === 'undefined' || !TRQ.ajaxurl) {
+            return;
+        }
+
+        e.preventDefault();
+        backupCancelRequestInFlight = true;
+        $cancelBackupButton.prop('disabled', true);
+
+        updateBackupProgressUi({
+            in_progress: true,
+            percent: parseInt($backupProgressPercent.text(), 10) || 0,
+            message: trqStrings.backupCancelling
+        });
+
+        $.post(TRQ.ajaxurl, {
+            action: 'trq_cancel_backup',
+            nonce: TRQ.nonce
+        }).done(function (response) {
+            if (!response || !response.success) {
+                updateBackupProgressUi({
+                    in_progress: true,
+                    percent: parseInt($backupProgressPercent.text(), 10) || 0,
+                    message: (response && response.data && response.data.message) ? response.data.message : trqStrings.backupCancelError
+                });
+                return;
+            }
+
+            if (response.data && response.data.progress) {
+                updateBackupProgressUi(response.data.progress);
+            } else {
+                updateBackupProgressUi({
+                    in_progress: true,
+                    percent: parseInt($backupProgressPercent.text(), 10) || 0,
+                    message: trqStrings.backupCancelRequested
+                });
+            }
+
+            startBackupPolling();
+        }).fail(function () {
+            updateBackupProgressUi({
+                in_progress: true,
+                percent: parseInt($backupProgressPercent.text(), 10) || 0,
+                message: trqStrings.backupCancelError
+            });
+        }).always(function () {
+            backupCancelRequestInFlight = false;
+            syncBackupButtons({ in_progress: $backupProgress.attr('data-running') === '1' });
+        });
+    });
 
     $(document).on('click', '#trq-run-backup-now', function (e) {
         if (typeof TRQ === 'undefined' || !TRQ.ajaxurl || !$backupsForm.length) {
@@ -423,6 +495,8 @@
         e.preventDefault();
         triggerManualBackup($form.find('#trq-run-backup-now'));
     });
+
+    syncBackupButtons({ in_progress: $backupProgress.attr('data-running') === '1' });
 
     if ($backupProgress.length && $backupProgress.attr('data-running') === '1') {
         startBackupPolling();

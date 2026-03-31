@@ -6,6 +6,8 @@ Site : https://yaurel.com
 
 Support : aurelandyou@gmail.com
 
+Contexte de reprise du projet : voir PROJECT_CONTEXT_RECOVERY.md à la racine du plugin.
+
 ## Installation
 
 1. **Copiez** ce dossier dans `wp-content/plugins/360tranquilite/`

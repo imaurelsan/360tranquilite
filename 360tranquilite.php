@@ -24,12 +24,6 @@ define( 'TRQ_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'TRQ_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
 define( 'TRQ_PLUGIN_FILE', __FILE__ );
 
-// Auto-update depuis GitHub Releases (repo public).
-define( 'TRQ_GITHUB_UPDATES_REPO', 'imaurelsan/360tranquilite' );
-define( 'TRQ_GITHUB_UPDATES_BRANCH', 'master' );
-define( 'TRQ_GITHUB_UPDATES_ASSET', '360tranquilite.zip' );
-define( 'TRQ_GITHUB_UPDATES_TESTED', '6.8' );
-
 if ( ! function_exists( 'trq_record_boot_error' ) ) {
     /**
      * Enregistre un dernier incident bootstrap pour diagnostic admin.

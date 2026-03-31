@@ -24,7 +24,10 @@ class TRQ_Backup_Manager {
     private const DUMP_BATCH_SIZE = 200;
     private const RESTORE_BATCH_SIZE = 25;
     private const PROGRESS_OPTION = 'trq_backup_progress';
+    private const CANCEL_OPTION = 'trq_backup_cancel_request';
+    private const RUNTIME_OPTION = 'trq_backup_runtime';
     private const MANUAL_ASYNC_HOOK = 'trq_run_backup_manual_async';
+    private const STALE_PROGRESS_TIMEOUT = 900;
 
     private function __construct() {}
 
@@ -66,6 +69,7 @@ class TRQ_Backup_Manager {
             ];
         }
 
+        $this->clear_backup_cancel_request();
         $this->update_backup_progress( 4, 'queued', 'Sauvegarde mise en file d’attente...', true );
         wp_clear_scheduled_hook( self::MANUAL_ASYNC_HOOK );
         $scheduled = wp_schedule_single_event( time() + 1, self::MANUAL_ASYNC_HOOK );
@@ -86,6 +90,55 @@ class TRQ_Backup_Manager {
         return [
             'success' => true,
             'message' => 'Sauvegarde lancée en arrière-plan.',
+        ];
+    }
+
+    public function cancel_manual_backup(): array {
+        $progress = $this->get_backup_progress();
+
+        if ( empty( $progress['in_progress'] ) ) {
+            $this->clear_backup_cancel_request();
+
+            return [
+                'success' => false,
+                'message' => 'Aucune sauvegarde en cours à annuler.',
+                'progress' => $progress,
+            ];
+        }
+
+        if ( 'queued' === (string) ( $progress['phase'] ?? '' ) ) {
+            wp_clear_scheduled_hook( self::MANUAL_ASYNC_HOOK );
+            $this->clear_backup_cancel_request();
+            $this->finish_backup_progress( false, 'Sauvegarde annulée avant son démarrage.' );
+
+            return [
+                'success' => true,
+                'message' => 'Sauvegarde annulée.',
+                'progress' => $this->get_backup_progress( true ),
+            ];
+        }
+
+        update_option(
+            self::CANCEL_OPTION,
+            [
+                'requested' => true,
+                'requested_at' => current_time( 'mysql', true ),
+            ],
+            false
+        );
+
+        $this->update_backup_progress(
+            (int) ( $progress['percent'] ?? 0 ),
+            (string) ( $progress['phase'] ?? 'cancelling' ),
+            'Annulation demandée. La sauvegarde va s’arrêter dès que possible...',
+            true,
+            [ 'success' => null ]
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Annulation demandée. La sauvegarde va s’arrêter dès que possible.',
+            'progress' => $this->get_backup_progress( true ),
         ];
     }
 
@@ -118,7 +171,16 @@ class TRQ_Backup_Manager {
 
     public function run_backup( string $trigger = 'manual' ): array {
         $core = TRQ_Core::get_instance();
+        $this->prepare_backup_runtime();
+        $this->clear_backup_cancel_request();
         $this->update_backup_progress( 2, 'init', 'Préparation de la sauvegarde...', true );
+
+        if ( function_exists( 'register_shutdown_function' ) ) {
+            register_shutdown_function( [ $this, 'handle_backup_shutdown' ] );
+        }
+
+        $this->store_backup_runtime( [ 'work_dir' => '', 'archive_path' => '' ] );
+        $this->assert_backup_not_cancelled();
 
         if ( ! class_exists( 'ZipArchive' ) ) {
             $this->finish_backup_progress( false, 'ZipArchive est requis pour créer les sauvegardes.' );
@@ -171,6 +233,12 @@ class TRQ_Backup_Manager {
         }
 
         $archive_path = trailingslashit( $keep_local ? $backup_dir : $work_dir ) . $archive_name;
+        $this->store_backup_runtime(
+            [
+                'work_dir' => $work_dir,
+                'archive_path' => $archive_path,
+            ]
+        );
 
         $manifest_data = [
             'files'        => [],
@@ -191,12 +259,16 @@ class TRQ_Backup_Manager {
                 $this->update_backup_progress( 42, 'files', 'Fichiers collectés : ' . count( $manifest_data['files'] ), true );
             }
 
+            $this->assert_backup_not_cancelled();
+
             if ( $core->get( 'backup_include_database' ) ) {
                 $this->update_backup_progress( 52, 'database', 'Export de la base de données...', true );
                 $database_path = trailingslashit( $work_dir ) . 'database.sql';
                 $database_tables = $this->dump_database_to_file( $database_path );
                 $this->update_backup_progress( 60, 'database', 'Tables SQL exportées : ' . $database_tables, true );
             }
+
+            $this->assert_backup_not_cancelled();
 
             $metadata = [
                 'generated_at'   => current_time( 'mysql', true ),
@@ -218,20 +290,55 @@ class TRQ_Backup_Manager {
 
             $this->update_backup_progress( 68, 'archive', 'Création de l’archive ZIP...', true );
 
+            $archive_items_total = count( $manifest_data['files'] ) + ( $database_path && file_exists( $database_path ) ? 1 : 0 );
+            $archive_items_done = 0;
+
             if ( $database_path && file_exists( $database_path ) ) {
-                $zip->addFile( $database_path, 'database.sql' );
+                if ( ! $zip->addFile( $database_path, 'database.sql' ) ) {
+                    throw new RuntimeException( 'Impossible d’ajouter le dump SQL à l’archive.' );
+                }
+                $archive_items_done++;
             }
 
             foreach ( $manifest_data['files'] as $path ) {
+                $this->assert_backup_not_cancelled();
+
                 $relative = ltrim( str_replace( wp_normalize_path( ABSPATH ), '', wp_normalize_path( $path ) ), '/' );
-                $zip->addFile( $path, 'site/' . $relative );
+                if ( ! $zip->addFile( $path, 'site/' . $relative ) ) {
+                    throw new RuntimeException( 'Impossible d’ajouter un fichier à l’archive : ' . basename( $path ) );
+                }
+
+                $archive_items_done++;
+
+                if ( 0 === ( $archive_items_done % 100 ) || $archive_items_done === $archive_items_total ) {
+                    $archive_percent = 68;
+                    if ( $archive_items_total > 0 ) {
+                        $archive_percent = 68 + (int) floor( min( 1, $archive_items_done / $archive_items_total ) * 8 );
+                    }
+
+                    $this->update_backup_progress(
+                        $archive_percent,
+                        'archive',
+                        sprintf(
+                            'Création de l’archive ZIP... %1$d/%2$d éléments',
+                            $archive_items_done,
+                            max( 1, $archive_items_total )
+                        ),
+                        true
+                    );
+                }
             }
 
-            $zip->addFromString(
+            if ( ! $zip->addFromString(
                 'backup-metadata.json',
                 wp_json_encode( $metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES )
-            );
-            $zip->close();
+            ) ) {
+                throw new RuntimeException( 'Impossible d’ajouter les métadonnées à l’archive.' );
+            }
+
+            if ( ! $zip->close() ) {
+                throw new RuntimeException( 'Impossible de finaliser l’archive ZIP.' );
+            }
 
             if ( ! file_exists( $archive_path ) ) {
                 throw new RuntimeException( 'L’archive n’a pas été créée.' );
@@ -321,6 +428,7 @@ class TRQ_Backup_Manager {
                 'message' => 'Sauvegarde ' . $mode . ' créée avec succès : ' . $archive_name,
             ];
         } catch ( Throwable $exception ) {
+            $this->delete_partial_backup_file( $archive_path );
             update_option(
                 'trq_last_backup_report',
                 [
@@ -340,6 +448,8 @@ class TRQ_Backup_Manager {
                 'message' => 'Échec de la sauvegarde : ' . $exception->getMessage(),
             ];
         } finally {
+            $this->clear_backup_cancel_request();
+            $this->clear_backup_runtime();
             $this->cleanup_work_dir( $work_dir );
             if ( 'scheduled' === $trigger ) {
                 $this->ensure_schedule();
@@ -702,6 +812,24 @@ class TRQ_Backup_Manager {
             $progress
         );
 
+        if ( ! empty( $normalized['in_progress'] ) && $this->is_backup_progress_stale( $normalized ) ) {
+            $this->clear_backup_cancel_request();
+            $this->clear_backup_runtime();
+            $this->finish_backup_progress( false, 'La sauvegarde précédente semble avoir été interrompue par le serveur.' );
+
+            $normalized = array_merge(
+                $normalized,
+                [
+                    'in_progress' => false,
+                    'percent' => 100,
+                    'phase' => 'failed',
+                    'message' => 'La sauvegarde précédente semble avoir été interrompue par le serveur.',
+                    'success' => false,
+                    'updated_at' => current_time( 'mysql', true ),
+                ]
+            );
+        }
+
         if ( ! $preserve_completed_state && empty( $normalized['in_progress'] ) ) {
             $normalized['percent'] = 0;
             $normalized['phase'] = '';
@@ -710,6 +838,34 @@ class TRQ_Backup_Manager {
         }
 
         return $normalized;
+    }
+
+    public function handle_backup_shutdown(): void {
+        $progress = get_option( self::PROGRESS_OPTION, [] );
+        if ( ! is_array( $progress ) || empty( $progress['in_progress'] ) ) {
+            return;
+        }
+
+        $error = error_get_last();
+        if ( ! is_array( $error ) || ! $this->is_fatal_error_type( (int) ( $error['type'] ?? 0 ) ) ) {
+            return;
+        }
+
+        $runtime = get_option( self::RUNTIME_OPTION, [] );
+        if ( ! is_array( $runtime ) ) {
+            $runtime = [];
+        }
+
+        $message = 'Sauvegarde interrompue par une erreur fatale PHP.';
+        if ( ! empty( $error['message'] ) && is_string( $error['message'] ) ) {
+            $message = 'Sauvegarde interrompue : ' . wp_strip_all_tags( $error['message'] );
+        }
+
+        $this->delete_partial_backup_file( (string) ( $runtime['archive_path'] ?? '' ) );
+        $this->cleanup_work_dir( (string) ( $runtime['work_dir'] ?? '' ) );
+        $this->clear_backup_cancel_request();
+        $this->clear_backup_runtime();
+        $this->finish_backup_progress( false, $message );
     }
 
     private function update_backup_progress( int $percent, string $phase, string $message, bool $in_progress, array $extra = [] ): void {
@@ -1111,6 +1267,8 @@ class TRQ_Backup_Manager {
         );
 
         foreach ( $iterator as $file ) {
+            $this->assert_backup_not_cancelled();
+
             if ( ! $file->isFile() ) {
                 continue;
             }
@@ -1135,6 +1293,10 @@ class TRQ_Backup_Manager {
 
             if ( 'full' === $mode || $changed ) {
                 $files[] = $path;
+            }
+
+            if ( 0 === ( $scanned_files % 250 ) ) {
+                $this->update_backup_progress( 18, 'files', 'Collecte des fichiers WordPress... ' . $scanned_files . ' fichiers analysés', true );
             }
         }
 
@@ -1164,7 +1326,12 @@ class TRQ_Backup_Manager {
         fwrite( $handle, "-- 360 Tranquillité SQL backup\n" );
         fwrite( $handle, '-- Generated at: ' . gmdate( 'c' ) . "\n\n" );
 
+        $table_count = count( $tables );
+        $processed_tables = 0;
+
         foreach ( $tables as $table ) {
+            $this->assert_backup_not_cancelled();
+
             $create = $wpdb->get_row( 'SHOW CREATE TABLE `' . esc_sql( $table ) . '`', ARRAY_N );
             fwrite( $handle, 'DROP TABLE IF EXISTS `' . $table . '`;' . "\n" );
             fwrite( $handle, (string) ( $create[1] ?? '' ) . ';' . "\n\n" );
@@ -1179,6 +1346,8 @@ class TRQ_Backup_Manager {
                 if ( ! is_array( $rows ) || empty( $rows ) ) {
                     continue;
                 }
+
+                $this->assert_backup_not_cancelled();
 
                 foreach ( $rows as $row ) {
                     $columns = array_map(
@@ -1196,6 +1365,20 @@ class TRQ_Backup_Manager {
                 }
                 fwrite( $handle, "\n" );
             }
+
+            $processed_tables++;
+            $progress = 52;
+            if ( $table_count > 0 ) {
+                $progress = 52 + (int) floor( min( 1, $processed_tables / $table_count ) * 8 );
+            }
+
+            $this->update_backup_progress(
+                $progress,
+                'database',
+                sprintf( 'Export de la base de données... table %1$d/%2$d', $processed_tables, max( 1, $table_count ) ),
+                true
+            );
+
             fwrite( $handle, "\n" );
         }
 
@@ -2026,6 +2209,64 @@ class TRQ_Backup_Manager {
         if ( $filesystem ) {
             $filesystem->delete( $work_dir, true, 'd' );
         }
+    }
+
+    private function prepare_backup_runtime(): void {
+        if ( function_exists( 'ignore_user_abort' ) ) {
+            @ignore_user_abort( true );
+        }
+
+        if ( function_exists( 'set_time_limit' ) ) {
+            @set_time_limit( 0 );
+        }
+    }
+
+    private function assert_backup_not_cancelled(): void {
+        $cancel = get_option( self::CANCEL_OPTION, [] );
+        if ( ! is_array( $cancel ) || empty( $cancel['requested'] ) ) {
+            return;
+        }
+
+        throw new RuntimeException( 'Sauvegarde annulée par l’administrateur.' );
+    }
+
+    private function clear_backup_cancel_request(): void {
+        delete_option( self::CANCEL_OPTION );
+    }
+
+    private function store_backup_runtime( array $runtime ): void {
+        update_option( self::RUNTIME_OPTION, $runtime, false );
+    }
+
+    private function clear_backup_runtime(): void {
+        delete_option( self::RUNTIME_OPTION );
+    }
+
+    private function is_backup_progress_stale( array $progress ): bool {
+        $updated_at = isset( $progress['updated_at'] ) ? strtotime( (string) $progress['updated_at'] ) : false;
+        if ( false === $updated_at ) {
+            return false;
+        }
+
+        return ( time() - $updated_at ) > self::STALE_PROGRESS_TIMEOUT;
+    }
+
+    private function is_fatal_error_type( int $error_type ): bool {
+        return in_array( $error_type, [ E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR ], true );
+    }
+
+    private function delete_partial_backup_file( string $archive_path ): void {
+        if ( '' === $archive_path || ! file_exists( $archive_path ) ) {
+            return;
+        }
+
+        $filesystem = $this->get_filesystem();
+        if ( $filesystem ) {
+            $filesystem->delete( $archive_path, false, 'f' );
+            return;
+        }
+
+        @unlink( $archive_path );
     }
 
     private function get_filesystem() {

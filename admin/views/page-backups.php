@@ -175,8 +175,9 @@ $backup_base_dir = trailingslashit( $upload_dir['basedir'] ) . $core->get( 'back
         <input type="hidden" name="action" value="trq_action" />
         <input type="hidden" name="trq_tab" value="backups" />
         <input type="hidden" name="trq_do" value="run_backup_now" />
-        <p>
+        <p class="trq-backup-actions">
             <button type="submit" class="button button-primary" id="trq-run-backup-now">Lancer une sauvegarde maintenant</button>
+            <button type="button" class="button button-secondary" id="trq-cancel-backup"<?php echo empty( $summary['progress']['in_progress'] ) ? ' hidden' : ''; ?>>Annuler</button>
         </p>
     </form>
     <div class="trq-backup-progress" data-running="<?php echo ! empty( $summary['progress']['in_progress'] ) ? '1' : '0'; ?>"<?php echo empty( $summary['progress']['in_progress'] ) ? ' hidden' : ''; ?>>

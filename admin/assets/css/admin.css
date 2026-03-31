@@ -503,6 +503,13 @@
     max-width: 760px;
 }
 
+.trq-backup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
 .trq-backup-progress-meta {
     display: flex;
     align-items: center;
