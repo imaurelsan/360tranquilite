@@ -17,6 +17,7 @@ class TRQ_Github_Updates {
 
     private const CACHE_TRANSIENT_KEY = 'trq_github_release_cache';
     private const CACHE_TTL_SECONDS = 1800;
+    private const DEFAULT_PUBLIC_REPO = 'imaurelsan/360tranquilite';
 
     private function __construct() {}
 
@@ -156,10 +157,12 @@ class TRQ_Github_Updates {
      * @return array{enabled: bool, repo: string, branch: string, asset_name: string, tested_up_to: string}
      */
     private function get_config(): array {
-        $repo = defined( 'TRQ_GITHUB_UPDATES_REPO' ) ? (string) TRQ_GITHUB_UPDATES_REPO : '';
+        $repo_raw = defined( 'TRQ_GITHUB_UPDATES_REPO' ) ? trim( (string) TRQ_GITHUB_UPDATES_REPO ) : self::DEFAULT_PUBLIC_REPO;
+        $repo = $this->normalize_repo_identifier( $repo_raw );
+        $enabled = defined( 'TRQ_GITHUB_UPDATES_ENABLED' ) ? (bool) TRQ_GITHUB_UPDATES_ENABLED : ( '' !== $repo );
 
         $config = [
-            'enabled' => '' !== $repo,
+            'enabled' => $enabled,
             'repo' => $repo,
             'branch' => defined( 'TRQ_GITHUB_UPDATES_BRANCH' ) ? (string) TRQ_GITHUB_UPDATES_BRANCH : 'main',
             'asset_name' => defined( 'TRQ_GITHUB_UPDATES_ASSET' ) ? (string) TRQ_GITHUB_UPDATES_ASSET : '360tranquilite.zip',
@@ -173,13 +176,34 @@ class TRQ_Github_Updates {
          */
         $config = (array) apply_filters( 'trq_github_updates_config', $config );
 
-        $config['enabled'] = ! empty( $config['enabled'] ) && ! empty( $config['repo'] );
-        $config['repo'] = (string) ( $config['repo'] ?? '' );
+        $config['repo'] = $this->normalize_repo_identifier( (string) ( $config['repo'] ?? '' ) );
+        $config['enabled'] = ! empty( $config['enabled'] ) && '' !== $config['repo'];
         $config['branch'] = (string) ( $config['branch'] ?? 'main' );
         $config['asset_name'] = (string) ( $config['asset_name'] ?? '360tranquilite.zip' );
         $config['tested_up_to'] = (string) ( $config['tested_up_to'] ?? '' );
 
         return $config;
+    }
+
+    /**
+     * Accepte owner/repo, URL GitHub, ou valeur suffixee en .git.
+     */
+    private function normalize_repo_identifier( string $repo ): string {
+        $repo = trim( $repo );
+        if ( '' === $repo ) {
+            return '';
+        }
+
+        if ( 0 === strpos( $repo, 'http://' ) || 0 === strpos( $repo, 'https://' ) ) {
+            $path = (string) wp_parse_url( $repo, PHP_URL_PATH );
+            $repo = trim( $path, " \t\n\r\0\x0B/" );
+        }
+
+        if ( '.git' === strtolower( substr( $repo, -4 ) ) ) {
+            $repo = substr( $repo, 0, -4 );
+        }
+
+        return trim( $repo, " \t\n\r\0\x0B/" );
     }
 
     /**

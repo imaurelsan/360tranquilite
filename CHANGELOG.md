@@ -2,6 +2,14 @@
 
 Toutes les évolutions notables de 360 Tranquillité seront documentées dans ce fichier.
 
+## 1.10.5 - 2026-03-31
+- Mises à jour GitHub: normalisation de `TRQ_GITHUB_UPDATES_REPO` (accepte `owner/repo`, URL GitHub complète, et suffixe `.git`)
+- Mises à jour GitHub: validation finale du repo après filtre `trq_github_updates_config` pour éviter les configurations invalides
+
+## 1.10.4 - 2026-03-31
+- Mises à jour GitHub: activation par défaut sur le repo public `imaurelsan/360tranquilite` si aucune constante n'est définie
+- Mises à jour GitHub: ajout de la constante optionnelle `TRQ_GITHUB_UPDATES_ENABLED` pour forcer l'activation ou la désactivation
+
 ## 1.10.3 - 2026-03-31
 - Sauvegardes: ajout d'un bouton Annuler pendant une sauvegarde en cours
 - Sauvegardes: annulation coopérative côté moteur avec arrêt au prochain point de contrôle
