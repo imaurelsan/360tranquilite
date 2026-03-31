@@ -2,6 +2,12 @@
 
 Toutes les évolutions notables de 360 Tranquillité seront documentées dans ce fichier.
 
+## 1.10.3 - 2026-03-31
+- Sauvegardes: ajout d'un bouton Annuler pendant une sauvegarde en cours
+- Sauvegardes: annulation coopérative côté moteur avec arrêt au prochain point de contrôle
+- Sauvegardes: progression enrichie pendant le scan fichiers, l'export SQL et la création de l'archive ZIP
+- Sauvegardes: meilleure robustesse en cas d'interruption serveur (détection d'état bloqué, nettoyage des artefacts temporaires)
+
 ## 1.10.2 - 2026-03-30
 - Uniformisation visuelle : la carte du score reprend désormais le même fond turquoise que la section d’introduction de l’onglet À propos
 
