@@ -146,12 +146,19 @@ $audit_logs  = TRQ_Audit_Log::get_instance()->get_logs( 20 );
     <h2>📧 Notifications de sécurité</h2>
     <table class="form-table">
         <tr>
+            <th>Recevoir des notifications</th>
+            <td>
+                <?php TRQ_Admin::toggle( 'notify_enabled', (bool) $core->get( 'notify_enabled', true ), 'Activer l’envoi des notifications email de sécurité' ); ?>
+            </td>
+        </tr>
+        <tr>
             <th><label for="notify_email">Email de notification</label></th>
             <td>
                 <input type="email" id="notify_email" name="notify_email"
-                       value="<?php echo esc_attr( $core->get( 'notify_email' ) ?: get_option( 'admin_email' ) ); ?>"
+                       value="<?php echo esc_attr( (string) $core->get( 'notify_email', '' ) ); ?>"
+                       placeholder="<?php echo esc_attr( (string) get_option( 'admin_email' ) ); ?>"
                        class="regular-text" />
-                <p class="description">Reçoit les alertes : brute-force, modifications de fichiers, blocages IP automatiques.</p>
+                <p class="description">Laissez vide pour ne pas recevoir d’email. L’adresse admin du site est affichée uniquement en suggestion.</p>
             </td>
         </tr>
         <tr>

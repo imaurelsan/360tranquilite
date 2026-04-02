@@ -510,6 +510,17 @@
     align-items: center;
 }
 
+.trq-dashboard-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.trq-dashboard-quick-actions form {
+    margin: 0;
+}
+
 .trq-backup-progress-meta {
     display: flex;
     align-items: center;

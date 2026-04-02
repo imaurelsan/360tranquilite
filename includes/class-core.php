@@ -197,6 +197,7 @@ class TRQ_Core {
         // Langue plugin
         'plugin_language'            => 'auto',
         // Notifications
+        'notify_enabled'            => true,
         'notify_email'              => '',
         'data_retention_days'       => 30,
     ];
@@ -673,10 +674,17 @@ class TRQ_Core {
 
     /** Envoi d'une notification email à l'admin */
     public static function notify( string $subject, string $message ): void {
-        $email = self::get_instance()->get( 'notify_email' ) ?: get_option( 'admin_email' );
-        if ( $email ) {
-            wp_mail( $email, '[360 Tranquillité] ' . $subject, $message );
+        $core = self::get_instance();
+        if ( ! (bool) $core->get( 'notify_enabled', true ) ) {
+            return;
         }
+
+        $email = trim( (string) $core->get( 'notify_email', '' ) );
+        if ( '' === $email ) {
+            return;
+        }
+
+        wp_mail( $email, '[360 Tranquillité] ' . $subject, $message );
     }
 
     public function filter_plugin_locale( string $locale, string $domain ): string {

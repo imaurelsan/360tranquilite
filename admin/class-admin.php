@@ -379,6 +379,7 @@ class TRQ_Admin {
                 $settings['audit_log_enabled']        = ! empty( $post['audit_log_enabled'] );
                 $settings['antispam_enabled']         = ! empty( $post['antispam_enabled'] );
                 $settings['antispam_form_protection_enabled'] = ! empty( $post['antispam_form_protection_enabled'] );
+                $settings['notify_enabled']           = ! empty( $post['notify_enabled'] );
                 $settings['notify_email']             = sanitize_email( $post['notify_email'] ?? '' );
                 $settings['data_retention_days']      = max( 7, min( 365, (int) ( $post['data_retention_days'] ?? 30 ) ) );
                 break;
@@ -884,6 +885,20 @@ class TRQ_Admin {
                 );
                 break;
 
+            case 'disable_all_profile':
+                $disabled = $this->get_disabled_profile_settings();
+                TRQ_Core::get_instance()->update( $disabled );
+                TRQ_Threat_Definitions::get_instance()->ensure_schedule();
+                set_transient(
+                    'trq_admin_notice',
+                    [
+                        'success' => true,
+                        'message' => sprintf( 'Tous les modules ont été désactivés (%d options mises à jour).', count( $disabled ) ),
+                    ],
+                    60
+                );
+                break;
+
             default:
                 break;
         }
@@ -1005,6 +1020,7 @@ class TRQ_Admin {
             'audit_log_enabled' => true,
             'antispam_enabled' => true,
             'antispam_form_protection_enabled' => true,
+            'notify_enabled' => true,
             'updates_auto_enabled' => false,
             'updates_plugins_auto' => false,
             'updates_themes_auto' => false,
@@ -1013,6 +1029,55 @@ class TRQ_Admin {
             'updates_pre_update_backup_enabled' => true,
             'updates_auto_rollback_enabled' => false,
             'updates_post_update_healthcheck_enabled' => true,
+            'media_cleanup_enabled' => false,
+            'media_cleanup_auto_enabled' => false,
+            'toolkit_enabled' => false,
+            'toolkit_allow_svg' => false,
+            'toolkit_allow_avif' => false,
+            'toolkit_duplicate_content' => false,
+            'toolkit_admin_columns_enabled' => false,
+            'toolkit_smtp_enabled' => false,
+            'toolkit_smtp_auth' => false,
+            'login_visual_customization_enabled' => false,
+        ];
+    }
+
+    private function get_disabled_profile_settings(): array {
+        return [
+            'firewall_enabled' => false,
+            'firewall_block_sqli' => false,
+            'firewall_block_xss' => false,
+            'firewall_block_traversal' => false,
+            'firewall_block_bad_bots' => false,
+            'disable_user_enum' => false,
+            'two_factor_enabled' => false,
+            'cloudflare_enabled' => false,
+            'cloudflare_sync_blocks' => false,
+            'backup_enabled' => false,
+            'security_headers_enabled' => false,
+            'disable_xmlrpc' => false,
+            'hide_wp_version' => false,
+            'disable_file_edit' => false,
+            'disable_file_mods' => false,
+            'disable_application_passwords' => false,
+            'file_monitor_enabled' => false,
+            'db_scan_enabled' => false,
+            'admin_review_enabled' => false,
+            'uploads_hardening_enabled' => false,
+            'core_checksum_enabled' => false,
+            'definitions_auto_update_enabled' => false,
+            'audit_log_enabled' => false,
+            'antispam_enabled' => false,
+            'antispam_form_protection_enabled' => false,
+            'notify_enabled' => false,
+            'updates_auto_enabled' => false,
+            'updates_plugins_auto' => false,
+            'updates_themes_auto' => false,
+            'updates_translations_auto' => false,
+            'updates_window_enabled' => false,
+            'updates_pre_update_backup_enabled' => false,
+            'updates_auto_rollback_enabled' => false,
+            'updates_post_update_healthcheck_enabled' => false,
             'media_cleanup_enabled' => false,
             'media_cleanup_auto_enabled' => false,
             'toolkit_enabled' => false,

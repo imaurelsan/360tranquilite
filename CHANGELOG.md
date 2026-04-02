@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables de 360 Tranquillité seront documentées dans ce fichier.
 
+## 1.10.6 - 2026-04-01
+- Tableau de bord: ajout d’un bouton `Tout désactiver (debug)` pour couper rapidement les principaux modules en cas de diagnostic
+- Notifications de sécurité: ajout d’une option explicite pour activer/désactiver l’envoi d’emails
+- Notifications de sécurité: le champ email peut désormais être vidé (l’email admin est conservé en suggestion, sans réinjection automatique)
+
 ## 1.10.5 - 2026-03-31
 - Mises à jour GitHub: normalisation de `TRQ_GITHUB_UPDATES_REPO` (accepte `owner/repo`, URL GitHub complète, et suffixe `.git`)
 - Mises à jour GitHub: validation finale du repo après filtre `trq_github_updates_config` pour éviter les configurations invalides

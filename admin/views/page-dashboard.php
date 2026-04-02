@@ -103,13 +103,22 @@ $score_emoji = $score >= 80 ? '🟢' : ( $score >= 50 ? '🟡' : '🔴' );
     <div class="trq-section trq-dashboard-recommended">
         <h2>Démarrage rapide</h2>
         <p>Vous pouvez appliquer en un clic une configuration recommandée (sécurisée et non destructive), puis ajuster chaque module selon vos besoins.</p>
-        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-confirm="Appliquer la configuration recommandée ? Vous pourrez ensuite tout ajuster manuellement.">
-            <?php wp_nonce_field( 'trq_action' ); ?>
-            <input type="hidden" name="action" value="trq_action" />
-            <input type="hidden" name="trq_do" value="apply_recommended_profile" />
-            <input type="hidden" name="trq_tab" value="dashboard" />
-            <button type="submit" class="button button-primary">Activer la configuration recommandée</button>
-        </form>
+        <div class="trq-dashboard-quick-actions">
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-confirm="Appliquer la configuration recommandée ? Vous pourrez ensuite tout ajuster manuellement.">
+                <?php wp_nonce_field( 'trq_action' ); ?>
+                <input type="hidden" name="action" value="trq_action" />
+                <input type="hidden" name="trq_do" value="apply_recommended_profile" />
+                <input type="hidden" name="trq_tab" value="dashboard" />
+                <button type="submit" class="button button-primary">Activer la configuration recommandée</button>
+            </form>
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-confirm="Désactiver tous les modules de sécurité et d'automatisation ? Cette action est utile pour du debug temporaire.">
+                <?php wp_nonce_field( 'trq_action' ); ?>
+                <input type="hidden" name="action" value="trq_action" />
+                <input type="hidden" name="trq_do" value="disable_all_profile" />
+                <input type="hidden" name="trq_tab" value="dashboard" />
+                <button type="submit" class="button button-secondary">Tout désactiver (debug)</button>
+            </form>
+        </div>
     </div>
 
     <?php if ( ! empty( $alerts ) ) : ?>
