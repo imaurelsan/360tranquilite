@@ -34,6 +34,110 @@ class TRQ_Media_Cleanup {
         add_action( 'init', [ $this, 'ensure_scheduled_event' ] );
         add_action( 'trq_media_cleanup_weekly_event', [ $this, 'run_scheduled_cleanup' ] );
         add_action( 'before_delete_post', [ $this, 'cleanup_post_media' ], 10 );
+        add_filter( 'big_image_size_threshold', [ $this, 'filter_big_image_size_threshold' ], 20, 4 );
+        add_filter( 'wp_editor_set_quality', [ $this, 'filter_editor_quality' ], 20, 2 );
+        add_filter( 'wp_generate_attachment_metadata', [ $this, 'generate_webp_variants' ], 20, 2 );
+    }
+
+    private function is_optimization_enabled(): bool {
+        return (bool) TRQ_Core::get_instance()->get( 'media_optimization_enabled', false );
+    }
+
+    public function filter_big_image_size_threshold( $threshold, array $imagesize, string $file, int $attachment_id ) {
+        unset( $imagesize, $file, $attachment_id );
+
+        if ( ! $this->is_optimization_enabled() ) {
+            return $threshold;
+        }
+
+        $max_width = max( 640, min( 6000, (int) TRQ_Core::get_instance()->get( 'media_optimization_max_width', 2560 ) ) );
+        $max_height = max( 640, min( 6000, (int) TRQ_Core::get_instance()->get( 'media_optimization_max_height', 2560 ) ) );
+
+        return max( $max_width, $max_height );
+    }
+
+    public function filter_editor_quality( int $quality, string $mime_type ): int {
+        unset( $mime_type );
+
+        if ( ! $this->is_optimization_enabled() ) {
+            return $quality;
+        }
+
+        return max( 30, min( 100, (int) TRQ_Core::get_instance()->get( 'media_optimization_quality', 82 ) ) );
+    }
+
+    public function generate_webp_variants( array $metadata, int $attachment_id ): array {
+        if ( ! $this->is_optimization_enabled() || ! TRQ_Core::get_instance()->get( 'media_optimization_generate_webp', false ) ) {
+            return $metadata;
+        }
+
+        $attached_file = get_attached_file( $attachment_id );
+        if ( ! is_string( $attached_file ) || '' === $attached_file || ! file_exists( $attached_file ) ) {
+            return $metadata;
+        }
+
+        $quality = max( 30, min( 100, (int) TRQ_Core::get_instance()->get( 'media_optimization_quality', 82 ) ) );
+
+        $paths = [ $attached_file ];
+        if ( ! empty( $metadata['sizes'] ) && is_array( $metadata['sizes'] ) ) {
+            $base_dir = trailingslashit( dirname( $attached_file ) );
+            foreach ( $metadata['sizes'] as $size_data ) {
+                if ( ! is_array( $size_data ) || empty( $size_data['file'] ) ) {
+                    continue;
+                }
+
+                $candidate = $base_dir . ltrim( (string) $size_data['file'], '/\\' );
+                if ( file_exists( $candidate ) ) {
+                    $paths[] = $candidate;
+                }
+            }
+        }
+
+        foreach ( array_values( array_unique( $paths ) ) as $source_file ) {
+            $this->generate_webp_file( $source_file, $quality );
+        }
+
+        return $metadata;
+    }
+
+    private function generate_webp_file( string $source_file, int $quality ): void {
+        $extension = strtolower( (string) pathinfo( $source_file, PATHINFO_EXTENSION ) );
+        if ( in_array( $extension, [ 'webp', 'svg' ], true ) ) {
+            return;
+        }
+
+        $target_file = preg_replace( '/\.[^.]+$/', '.webp', $source_file );
+        if ( ! is_string( $target_file ) || '' === $target_file ) {
+            return;
+        }
+
+        $editor = wp_get_image_editor( $source_file );
+        if ( is_wp_error( $editor ) ) {
+            return;
+        }
+
+        if ( method_exists( $editor, 'set_quality' ) ) {
+            $editor->set_quality( $quality );
+        }
+
+        $saved = $editor->save( $target_file, 'image/webp' );
+        if ( is_wp_error( $saved ) ) {
+            // Fallback for editors expecting mime_type in an args array.
+            $editor = wp_get_image_editor( $source_file );
+            if ( is_wp_error( $editor ) ) {
+                return;
+            }
+            if ( method_exists( $editor, 'set_quality' ) ) {
+                $editor->set_quality( $quality );
+            }
+            $editor->save(
+                $target_file,
+                [
+                    'mime_type' => 'image/webp',
+                    'quality' => $quality,
+                ]
+            );
+        }
     }
 
     public function register_weekly_schedule( array $schedules ): array {

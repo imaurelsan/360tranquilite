@@ -21,6 +21,8 @@ class TRQ_Admin {
         'backups',
         'updates',
         'media',
+        'content',
+        'adminui',
         'toolkit',
         'advanced',
         'about',
@@ -48,6 +50,8 @@ class TRQ_Admin {
             'backups'    => __( 'Sauvegardes', '360tranquilite' ),
             'updates'    => __( 'Mises a jour', '360tranquilite' ),
             'media'      => __( 'Purge Medias', '360tranquilite' ),
+            'content'    => __( 'Contenu', '360tranquilite' ),
+            'adminui'    => __( 'Interface Admin', '360tranquilite' ),
             'toolkit'    => __( 'Boite a Outils Dev', '360tranquilite' ),
             'advanced'   => __( 'Avance', '360tranquilite' ),
             'about'      => __( 'A propos', '360tranquilite' ),
@@ -418,31 +422,15 @@ class TRQ_Admin {
                 $settings['media_cleanup_min_age_days'] = max( 1, min( 365, (int) ( $post['media_cleanup_min_age_days'] ?? 14 ) ) );
                 $keywords = sanitize_text_field( (string) ( $post['media_cleanup_protected_keywords'] ?? '' ) );
                 $settings['media_cleanup_protected_keywords'] = '' !== $keywords ? $keywords : 'logo,icon,favicon,placeholder,banner,default';
+                $settings['media_optimization_enabled'] = ! empty( $post['media_optimization_enabled'] );
+                $settings['media_optimization_max_width'] = max( 640, min( 6000, (int) ( $post['media_optimization_max_width'] ?? 2560 ) ) );
+                $settings['media_optimization_max_height'] = max( 640, min( 6000, (int) ( $post['media_optimization_max_height'] ?? 2560 ) ) );
+                $settings['media_optimization_quality'] = max( 30, min( 100, (int) ( $post['media_optimization_quality'] ?? 82 ) ) );
+                $settings['media_optimization_generate_webp'] = ! empty( $post['media_optimization_generate_webp'] );
                 break;
 
             case 'toolkit':
                 $settings['toolkit_enabled'] = ! empty( $post['toolkit_enabled'] );
-                $settings['toolkit_allow_svg'] = ! empty( $post['toolkit_allow_svg'] );
-                $settings['toolkit_allow_avif'] = ! empty( $post['toolkit_allow_avif'] );
-                $settings['toolkit_duplicate_content'] = ! empty( $post['toolkit_duplicate_content'] );
-                $settings['toolkit_cpt_builder_enabled'] = ! empty( $post['toolkit_cpt_builder_enabled'] );
-                $settings['toolkit_cpts_json'] = (string) wp_unslash( $post['toolkit_cpts_json'] ?? '' );
-                $settings['toolkit_taxonomies_json'] = (string) wp_unslash( $post['toolkit_taxonomies_json'] ?? '' );
-                $settings['toolkit_hide_admin_notices'] = ! empty( $post['toolkit_hide_admin_notices'] );
-                $settings['toolkit_disable_dashboard_widgets'] = ! empty( $post['toolkit_disable_dashboard_widgets'] );
-                $settings['toolkit_admin_columns_enabled'] = ! empty( $post['toolkit_admin_columns_enabled'] );
-                $post_types_raw = sanitize_text_field( (string) ( $post['toolkit_admin_columns_post_types'] ?? 'post,page' ) );
-                $post_types = array_values(
-                    array_filter(
-                        array_map( 'sanitize_key', explode( ',', $post_types_raw ) )
-                    )
-                );
-                $settings['toolkit_admin_columns_post_types'] = ! empty( $post_types ) ? implode( ',', $post_types ) : 'post,page';
-                $settings['toolkit_admin_column_id'] = ! empty( $post['toolkit_admin_column_id'] );
-                $settings['toolkit_admin_column_thumbnail'] = ! empty( $post['toolkit_admin_column_thumbnail'] );
-                $settings['toolkit_admin_column_slug'] = ! empty( $post['toolkit_admin_column_slug'] );
-                $settings['toolkit_admin_column_modified'] = ! empty( $post['toolkit_admin_column_modified'] );
-                $settings['toolkit_media_replacer_enabled'] = ! empty( $post['toolkit_media_replacer_enabled'] );
                 $settings['toolkit_login_redirect_enabled'] = ! empty( $post['toolkit_login_redirect_enabled'] );
                 $settings['toolkit_login_redirect_url'] = esc_url_raw( $post['toolkit_login_redirect_url'] ?? '' );
                 $settings['toolkit_logout_redirect_enabled'] = ! empty( $post['toolkit_logout_redirect_enabled'] );
@@ -476,6 +464,76 @@ class TRQ_Admin {
                 $settings['toolkit_heartbeat_mode'] = in_array( $post['toolkit_heartbeat_mode'] ?? 'default', [ 'default', 'reduced', 'disabled' ], true ) ? sanitize_key( $post['toolkit_heartbeat_mode'] ) : 'default';
                 $settings['toolkit_email_obfuscation'] = ! empty( $post['toolkit_email_obfuscation'] );
                 $settings['plugin_language'] = in_array( $post['plugin_language'] ?? 'auto', [ 'auto', 'fr_FR', 'en_US' ], true ) ? sanitize_text_field( $post['plugin_language'] ) : 'auto';
+                break;
+
+            case 'content':
+                $settings['toolkit_enabled'] = ! empty( $post['toolkit_enabled'] );
+                $settings['toolkit_duplicate_content'] = ! empty( $post['toolkit_duplicate_content'] );
+                $settings['toolkit_allow_svg'] = ! empty( $post['toolkit_allow_svg'] );
+                $settings['toolkit_allow_avif'] = ! empty( $post['toolkit_allow_avif'] );
+                $settings['toolkit_media_replacer_enabled'] = ! empty( $post['toolkit_media_replacer_enabled'] );
+                $settings['toolkit_cpt_builder_enabled'] = ! empty( $post['toolkit_cpt_builder_enabled'] );
+                $settings['toolkit_cpts_json'] = (string) wp_unslash( $post['toolkit_cpts_json'] ?? '' );
+                $settings['toolkit_taxonomies_json'] = (string) wp_unslash( $post['toolkit_taxonomies_json'] ?? '' );
+                $settings['toolkit_external_permalink_enabled'] = ! empty( $post['toolkit_external_permalink_enabled'] );
+                $settings['toolkit_external_permalink_new_tab'] = ! empty( $post['toolkit_external_permalink_new_tab'] );
+                $settings['toolkit_external_links_new_tab'] = ! empty( $post['toolkit_external_links_new_tab'] );
+                $settings['toolkit_external_links_nofollow'] = ! empty( $post['toolkit_external_links_nofollow'] );
+                $settings['toolkit_disable_comments'] = ! empty( $post['toolkit_disable_comments'] );
+                $settings['toolkit_disable_feeds'] = ! empty( $post['toolkit_disable_feeds'] );
+                $settings['toolkit_staging_noindex_enabled'] = ! empty( $post['toolkit_staging_noindex_enabled'] );
+                $patterns = sanitize_text_field( (string) ( $post['toolkit_staging_patterns'] ?? '' ) );
+                $settings['toolkit_staging_patterns'] = '' !== $patterns ? $patterns : 'staging.,dev.,localhost,.local,.test';
+                $settings['toolkit_staging_set_blog_public_zero'] = ! empty( $post['toolkit_staging_set_blog_public_zero'] );
+                break;
+
+            case 'adminui':
+                $settings['toolkit_enabled'] = ! empty( $post['toolkit_enabled'] );
+                $settings['toolkit_hide_admin_notices'] = ! empty( $post['toolkit_hide_admin_notices'] );
+                $settings['toolkit_disable_dashboard_widgets'] = ! empty( $post['toolkit_disable_dashboard_widgets'] );
+                $settings['toolkit_hide_front_admin_bar'] = ! empty( $post['toolkit_hide_front_admin_bar'] );
+                $settings['toolkit_admin_menu_width'] = max( 160, min( 360, (int) ( $post['toolkit_admin_menu_width'] ?? 160 ) ) );
+                $settings['toolkit_admin_menu_cleanup_enabled'] = ! empty( $post['toolkit_admin_menu_cleanup_enabled'] );
+                $menu_hidden = sanitize_text_field( (string) ( $post['toolkit_admin_menu_hidden_slugs'] ?? '' ) );
+                $settings['toolkit_admin_menu_hidden_slugs'] = $menu_hidden;
+                $settings['toolkit_admin_menu_reorder_enabled'] = ! empty( $post['toolkit_admin_menu_reorder_enabled'] );
+                $menu_order = sanitize_text_field( (string) ( $post['toolkit_admin_menu_order'] ?? '' ) );
+                $settings['toolkit_admin_menu_order'] = $menu_order;
+                $settings['toolkit_admin_footer_text_enabled'] = ! empty( $post['toolkit_admin_footer_text_enabled'] );
+                $settings['toolkit_admin_footer_text'] = sanitize_text_field( (string) ( $post['toolkit_admin_footer_text'] ?? '' ) );
+                $settings['toolkit_admin_bar_cleanup_enabled'] = ! empty( $post['toolkit_admin_bar_cleanup_enabled'] );
+                $settings['toolkit_admin_bar_remove_wp_logo'] = ! empty( $post['toolkit_admin_bar_remove_wp_logo'] );
+                $settings['toolkit_admin_bar_remove_comments'] = ! empty( $post['toolkit_admin_bar_remove_comments'] );
+                $settings['toolkit_admin_bar_remove_new_content'] = ! empty( $post['toolkit_admin_bar_remove_new_content'] );
+                $settings['toolkit_admin_bar_remove_updates'] = ! empty( $post['toolkit_admin_bar_remove_updates'] );
+                $settings['toolkit_admin_columns_enabled'] = ! empty( $post['toolkit_admin_columns_enabled'] );
+                $post_types_raw = sanitize_text_field( (string) ( $post['toolkit_admin_columns_post_types'] ?? 'post,page' ) );
+                $post_types = array_values(
+                    array_filter(
+                        array_map( 'sanitize_key', explode( ',', $post_types_raw ) )
+                    )
+                );
+                $settings['toolkit_admin_columns_post_types'] = ! empty( $post_types ) ? implode( ',', $post_types ) : 'post,page';
+                $settings['toolkit_admin_column_id'] = ! empty( $post['toolkit_admin_column_id'] );
+                $settings['toolkit_admin_column_thumbnail'] = ! empty( $post['toolkit_admin_column_thumbnail'] );
+                $settings['toolkit_admin_column_slug'] = ! empty( $post['toolkit_admin_column_slug'] );
+                $settings['toolkit_admin_column_modified'] = ! empty( $post['toolkit_admin_column_modified'] );
+                $settings['toolkit_users_last_login_column'] = ! empty( $post['toolkit_users_last_login_column'] );
+                $settings['toolkit_taxonomy_filters_enabled'] = ! empty( $post['toolkit_taxonomy_filters_enabled'] );
+                $tax_filter_post_types_raw = sanitize_text_field( (string) ( $post['toolkit_taxonomy_filters_post_types'] ?? 'post,page' ) );
+                $tax_filter_post_types = array_values(
+                    array_filter(
+                        array_map( 'sanitize_key', explode( ',', $tax_filter_post_types_raw ) )
+                    )
+                );
+                $settings['toolkit_taxonomy_filters_post_types'] = ! empty( $tax_filter_post_types ) ? implode( ',', $tax_filter_post_types ) : 'post,page';
+                $settings['toolkit_taxonomy_terms_order_enabled'] = ! empty( $post['toolkit_taxonomy_terms_order_enabled'] );
+                $settings['toolkit_taxonomy_terms_orderby'] = in_array( $post['toolkit_taxonomy_terms_orderby'] ?? 'name', [ 'name', 'slug', 'count', 'term_id' ], true )
+                    ? sanitize_key( (string) $post['toolkit_taxonomy_terms_orderby'] )
+                    : 'name';
+                $settings['toolkit_taxonomy_terms_order'] = in_array( strtoupper( (string) ( $post['toolkit_taxonomy_terms_order'] ?? 'ASC' ) ), [ 'ASC', 'DESC' ], true )
+                    ? strtoupper( sanitize_text_field( (string) $post['toolkit_taxonomy_terms_order'] ) )
+                    : 'ASC';
                 break;
 
             case 'backups':
@@ -969,7 +1027,7 @@ class TRQ_Admin {
         }
 
         $sanitized = [];
-        foreach ( [ 'firewall', 'login', 'twofactor', 'cloudflare', 'backups', 'advanced' ] as $tab ) {
+        foreach ( [ 'firewall', 'login', 'twofactor', 'cloudflare', 'backups', 'updates', 'media', 'content', 'adminui', 'toolkit', 'advanced' ] as $tab ) {
             $sanitized = array_merge( $sanitized, $this->sanitize_settings( $imported_settings, $tab ) );
         }
 
@@ -1031,13 +1089,31 @@ class TRQ_Admin {
             'updates_post_update_healthcheck_enabled' => true,
             'media_cleanup_enabled' => false,
             'media_cleanup_auto_enabled' => false,
+            'media_optimization_enabled' => false,
+            'media_optimization_generate_webp' => false,
             'toolkit_enabled' => false,
             'toolkit_allow_svg' => false,
             'toolkit_allow_avif' => false,
             'toolkit_duplicate_content' => false,
+            'toolkit_external_permalink_enabled' => false,
+            'toolkit_external_permalink_new_tab' => false,
+            'toolkit_external_links_new_tab' => false,
+            'toolkit_external_links_nofollow' => false,
+            'toolkit_disable_comments' => false,
+            'toolkit_disable_feeds' => false,
+            'toolkit_hide_front_admin_bar' => false,
+            'toolkit_admin_menu_cleanup_enabled' => false,
+            'toolkit_admin_menu_reorder_enabled' => false,
+            'toolkit_admin_footer_text_enabled' => false,
+            'toolkit_admin_bar_cleanup_enabled' => false,
             'toolkit_admin_columns_enabled' => false,
+            'toolkit_users_last_login_column' => false,
+            'toolkit_taxonomy_filters_enabled' => false,
+            'toolkit_taxonomy_terms_order_enabled' => false,
             'toolkit_smtp_enabled' => false,
             'toolkit_smtp_auth' => false,
+            'toolkit_staging_noindex_enabled' => false,
+            'toolkit_staging_set_blog_public_zero' => false,
             'login_visual_customization_enabled' => false,
         ];
     }
@@ -1080,13 +1156,31 @@ class TRQ_Admin {
             'updates_post_update_healthcheck_enabled' => false,
             'media_cleanup_enabled' => false,
             'media_cleanup_auto_enabled' => false,
+            'media_optimization_enabled' => false,
+            'media_optimization_generate_webp' => false,
             'toolkit_enabled' => false,
             'toolkit_allow_svg' => false,
             'toolkit_allow_avif' => false,
             'toolkit_duplicate_content' => false,
+            'toolkit_external_permalink_enabled' => false,
+            'toolkit_external_permalink_new_tab' => false,
+            'toolkit_external_links_new_tab' => false,
+            'toolkit_external_links_nofollow' => false,
+            'toolkit_disable_comments' => false,
+            'toolkit_disable_feeds' => false,
+            'toolkit_hide_front_admin_bar' => false,
+            'toolkit_admin_menu_cleanup_enabled' => false,
+            'toolkit_admin_menu_reorder_enabled' => false,
+            'toolkit_admin_footer_text_enabled' => false,
+            'toolkit_admin_bar_cleanup_enabled' => false,
             'toolkit_admin_columns_enabled' => false,
+            'toolkit_users_last_login_column' => false,
+            'toolkit_taxonomy_filters_enabled' => false,
+            'toolkit_taxonomy_terms_order_enabled' => false,
             'toolkit_smtp_enabled' => false,
             'toolkit_smtp_auth' => false,
+            'toolkit_staging_noindex_enabled' => false,
+            'toolkit_staging_set_blog_public_zero' => false,
             'login_visual_customization_enabled' => false,
         ];
     }

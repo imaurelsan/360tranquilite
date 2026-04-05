@@ -20,7 +20,8 @@ class TRQ_Firewall {
     // Patterns de détection (ordre = priorité)
     private const PATTERNS = [
         'sql_injection' => [
-            '/(\%27)|(\')|(\-\-)|(\%23)|(#)/i',
+            '/(?:\%27|\'|\")\s*(?:or|and)\s+[\w\(\)\s]+\s*=\s*[\w\(\)\s]+/ix',
+            '/\b(or|and)\b\s+\d+\s*=\s*\d+\b/ix',
             '/\b(union|select|insert|update|delete|drop|alter|create|exec|execute|declare|cast|convert|char|nchar|varchar|nvarchar|waitfor|delay|sleep|benchmark|load_file|into\s+outfile)\b/ix',
             '/\b(information_schema|sysobjects|syscolumns|sys\.tables)\b/ix',
         ],
@@ -81,6 +82,10 @@ class TRQ_Firewall {
         }
 
         if ( $this->should_bypass_for_wordpress_upgrade_flow() ) {
+            return;
+        }
+
+        if ( $this->should_bypass_for_login_flow() ) {
             return;
         }
 
@@ -219,6 +224,32 @@ class TRQ_Firewall {
         }
 
         return 'plugin-install' === $page;
+    }
+
+    private function should_bypass_for_login_flow(): bool {
+        $script = basename( sanitize_text_field( wp_unslash( $_SERVER['SCRIPT_NAME'] ?? '' ) ) );
+        $request_path = trim( (string) wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), PHP_URL_PATH ), '/' );
+        $home_path = trim( (string) wp_parse_url( home_url(), PHP_URL_PATH ), '/' );
+        $login_slug = trim( (string) TRQ_Core::get_instance()->get( 'login_slug', '' ) );
+        $action = sanitize_text_field( wp_unslash( $_REQUEST['action'] ?? '' ) );
+
+        if ( $home_path && 0 === strpos( $request_path, $home_path ) ) {
+            $request_path = trim( substr( $request_path, strlen( $home_path ) ), '/' );
+        }
+
+        if ( 'wp-login.php' === $script ) {
+            return true;
+        }
+
+        if ( '' !== $login_slug && ( $request_path === $login_slug || 0 === strpos( $request_path, $login_slug . '/' ) ) ) {
+            return true;
+        }
+
+        if ( isset( $_POST['log'], $_POST['pwd'] ) ) {
+            return true;
+        }
+
+        return in_array( $action, [ 'lostpassword', 'rp', 'resetpass', 'register', 'postpass' ], true );
     }
 
     private function should_bypass_for_trusted_admin_session(): bool {

@@ -51,6 +51,36 @@ $log_tail = $cleanup->get_log_tail();
                 <p class="description">Ces fichiers ne seront jamais supprimes si leur nom contient un de ces mots.</p>
             </td>
         </tr>
+
+        <tr><th colspan="2"><h3>Optimisation des images</h3></th></tr>
+        <tr>
+            <th>Activer l'optimisation</th>
+            <td>
+                <?php TRQ_Admin::toggle( 'media_optimization_enabled', (bool) $core->get( 'media_optimization_enabled', false ), 'Optimiser automatiquement les images lors du televersement' ); ?>
+            </td>
+        </tr>
+        <tr>
+            <th>Dimensions max</th>
+            <td>
+                <label>Largeur: <input type="number" min="640" max="6000" class="small-text" name="media_optimization_max_width" value="<?php echo esc_attr( (string) (int) $core->get( 'media_optimization_max_width', 2560 ) ); ?>" /> px</label>
+                &nbsp;&nbsp;
+                <label>Hauteur: <input type="number" min="640" max="6000" class="small-text" name="media_optimization_max_height" value="<?php echo esc_attr( (string) (int) $core->get( 'media_optimization_max_height', 2560 ) ); ?>" /> px</label>
+                <p class="description">Les images plus grandes sont redimensionnees pour rester dans cette limite.</p>
+            </td>
+        </tr>
+        <tr>
+            <th>Qualite compression</th>
+            <td>
+                <input type="number" min="30" max="100" class="small-text" name="media_optimization_quality" value="<?php echo esc_attr( (string) (int) $core->get( 'media_optimization_quality', 82 ) ); ?>" /> / 100
+                <p class="description">Applique une qualite uniforme aux nouvelles images generees.</p>
+            </td>
+        </tr>
+        <tr>
+            <th>Generation WebP</th>
+            <td>
+                <?php TRQ_Admin::toggle( 'media_optimization_generate_webp', (bool) $core->get( 'media_optimization_generate_webp', false ), 'Generer des variantes .webp (sans remplacer les originaux)' ); ?>
+            </td>
+        </tr>
     </table>
     <?php TRQ_Admin::settings_form_close(); ?>
 </div>

@@ -2,6 +2,34 @@
 
 Toutes les évolutions notables de 360 Tranquillité seront documentées dans ce fichier.
 
+## 1.10.10 - 2026-04-05
+- Pare-feu: correction d'un faux positif sur les formulaires de connexion (les caractères spéciaux légitimes dans les identifiants/mots de passe ne déclenchent plus un blocage SQLi)
+- Pare-feu: bypass explicite du flux d'authentification WordPress (`wp-login.php`, slug de connexion personnalisé, mot de passe perdu/reset) pour éviter le blocage de connexions légitimes
+
+## 1.10.9 - 2026-04-03
+- Interface Admin: ajout d'un organisateur de menu admin (masquage par slugs + réordonnancement par ordre personnalisé)
+- Interface Admin: ajout du tri global des termes de taxonomie (champ de tri + ordre ASC/DESC)
+- Contenu: ajout de l'automatisation staging SEO (détection par patterns d'hôte + noindex/nofollow forcé)
+- Contenu: option de synchronisation automatique du réglage WordPress `blog_public=0` en environnement staging détecté
+- Interface Admin: ajout d'une notice explicite quand le mode staging noindex est appliqué
+
+## 1.10.8 - 2026-04-03
+- Onglet Médias: ajout d'une section d'optimisation image dédiée (activation, dimensions max, qualité, génération WebP)
+- Pipeline upload: limitation configurable de la taille des grandes images via `big_image_size_threshold`
+- Pipeline upload: qualité de compression configurable appliquée via `wp_editor_set_quality`
+- Pipeline upload: génération automatique de variantes `.webp` (original + tailles dérivées) sans remplacer les originaux
+- Action debug "Tout désactiver": inclut désormais aussi les nouvelles options d'optimisation médias
+
+## 1.10.7 - 2026-04-02
+- Organisation admin: ajout de deux onglets dédiés `Contenu` et `Interface Admin` pour séparer clairement les catégories de réglages
+- Contenu: ajout des permaliens externes par contenu (metabox URL externe + redirection automatique sur single)
+- Contenu: ajout des options globales sur les liens externes (`target=_blank` et `rel=nofollow`) dans le contenu et les widgets
+- Contenu: ajout d'options globales de désactivation des commentaires et des flux RSS/Atom
+- Interface Admin: ajout d'options de nettoyage de la barre admin (logo WP, commentaires, +Nouveau, mises à jour)
+- Interface Admin: ajout d'options pour masquer la barre admin en front (non-admins), régler la largeur du menu admin, et personnaliser le footer admin
+- Interface Admin: ajout d'une colonne `Derniere connexion` dans la liste des utilisateurs (triable)
+- Interface Admin: ajout de filtres taxonomies dans les listes de contenus
+
 ## 1.10.6 - 2026-04-01
 - Tableau de bord: ajout d’un bouton `Tout désactiver (debug)` pour couper rapidement les principaux modules en cas de diagnostic
 - Notifications de sécurité: ajout d’une option explicite pour activer/désactiver l’envoi d’emails

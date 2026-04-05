@@ -1,6 +1,6 @@
 <?php
 /**
- * Vue : Boite a Outils Dev.
+ * Vue : Boite a Outils Dev (section technique).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -8,79 +8,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $core = TRQ_Core::get_instance();
-
-$default_cpt_json = "[\n  {\n    \"post_type\": \"resource\",\n    \"singular\": \"Resource\",\n    \"plural\": \"Resources\",\n    \"public\": true,\n    \"show_in_rest\": true,\n    \"has_archive\": true,\n    \"supports\": [\"title\", \"editor\", \"thumbnail\"]\n  }\n]";
-
-$default_tax_json = "[\n  {\n    \"taxonomy\": \"resource_topic\",\n    \"singular\": \"Topic\",\n    \"plural\": \"Topics\",\n    \"post_types\": [\"resource\"],\n    \"hierarchical\": true,\n    \"show_in_rest\": true\n  }\n]";
 ?>
 
 <div class="trq-section">
     <h2><?php esc_html_e( 'Boite a Outils Dev', '360tranquilite' ); ?></h2>
-    <p><?php esc_html_e( 'Fonctions utiles pour limiter les plugins additionnels. Activez seulement ce dont vous avez besoin.', '360tranquilite' ); ?></p>
+    <p><?php esc_html_e( 'Section technique: redirections de session, SMTP, injections de code, maintenance, optimisation et langue.', '360tranquilite' ); ?></p>
 
     <?php TRQ_Admin::settings_form_open( 'toolkit' ); ?>
     <table class="form-table" role="presentation">
         <tr>
             <th><?php esc_html_e( 'Activation globale', '360tranquilite' ); ?></th>
-            <td>
-                <?php TRQ_Admin::toggle( 'toolkit_enabled', (bool) $core->get( 'toolkit_enabled', false ), __( 'Activer la boite a outils dev', '360tranquilite' ) ); ?>
-            </td>
-        </tr>
-
-        <tr><th colspan="2"><h3><?php esc_html_e( 'Contenu', '360tranquilite' ); ?></h3></th></tr>
-        <tr>
-            <th><?php esc_html_e( 'Duplication de contenu', '360tranquilite' ); ?></th>
-            <td><?php TRQ_Admin::toggle( 'toolkit_duplicate_content', (bool) $core->get( 'toolkit_duplicate_content', true ), __( 'Ajouter un lien Dupliquer dans les listes de contenus', '360tranquilite' ) ); ?></td>
-        </tr>
-        <tr>
-            <th><?php esc_html_e( 'Televersements', '360tranquilite' ); ?></th>
-            <td>
-                <?php TRQ_Admin::toggle( 'toolkit_allow_svg', (bool) $core->get( 'toolkit_allow_svg', true ), __( 'Autoriser SVG', '360tranquilite' ) ); ?><br><br>
-                <?php TRQ_Admin::toggle( 'toolkit_allow_avif', (bool) $core->get( 'toolkit_allow_avif', true ), __( 'Autoriser AVIF', '360tranquilite' ) ); ?>
-            </td>
-        </tr>
-        <tr>
-            <th><?php esc_html_e( 'Media Replacer mediatheque', '360tranquilite' ); ?></th>
-            <td>
-                <?php TRQ_Admin::toggle( 'toolkit_media_replacer_enabled', (bool) $core->get( 'toolkit_media_replacer_enabled', false ), __( 'Ajouter l action Remplacer fichier pour chaque media', '360tranquilite' ) ); ?>
-                <p class="description"><?php esc_html_e( 'Le remplacement se fait ensuite dans la fiche de la piece jointe (et conserve ID/URLs si extension identique).', '360tranquilite' ); ?></p>
-            </td>
-        </tr>
-        <tr>
-            <th><?php esc_html_e( 'Constructeur CPT/Taxonomies', '360tranquilite' ); ?></th>
-            <td>
-                <?php TRQ_Admin::toggle( 'toolkit_cpt_builder_enabled', (bool) $core->get( 'toolkit_cpt_builder_enabled', false ), __( 'Activer l enregistrement dynamique de CPT et taxonomies', '360tranquilite' ) ); ?>
-                <p class="description"><?php esc_html_e( 'Format JSON: un objet par element. Les erreurs JSON sont ignorees en silence.', '360tranquilite' ); ?></p>
-
-                <label for="trq_toolkit_cpts_json"><strong><?php esc_html_e( 'CPT (JSON)', '360tranquilite' ); ?></strong></label>
-                <textarea id="trq_toolkit_cpts_json" class="large-text code" rows="8" name="toolkit_cpts_json"><?php echo esc_textarea( (string) $core->get( 'toolkit_cpts_json', $default_cpt_json ) ); ?></textarea>
-
-                <label for="trq_toolkit_taxonomies_json"><strong><?php esc_html_e( 'Taxonomies (JSON)', '360tranquilite' ); ?></strong></label>
-                <textarea id="trq_toolkit_taxonomies_json" class="large-text code" rows="8" name="toolkit_taxonomies_json"><?php echo esc_textarea( (string) $core->get( 'toolkit_taxonomies_json', $default_tax_json ) ); ?></textarea>
-            </td>
-        </tr>
-
-        <tr><th colspan="2"><h3><?php esc_html_e( 'Interface admin', '360tranquilite' ); ?></h3></th></tr>
-        <tr>
-            <th><?php esc_html_e( 'Nettoyage admin', '360tranquilite' ); ?></th>
-            <td>
-                <?php TRQ_Admin::toggle( 'toolkit_hide_admin_notices', (bool) $core->get( 'toolkit_hide_admin_notices', false ), __( 'Masquer la plupart des notices admin', '360tranquilite' ) ); ?><br><br>
-                <?php TRQ_Admin::toggle( 'toolkit_disable_dashboard_widgets', (bool) $core->get( 'toolkit_disable_dashboard_widgets', false ), __( 'Masquer les widgets natifs du tableau de bord', '360tranquilite' ) ); ?>
-            </td>
-        </tr>
-        <tr>
-            <th><?php esc_html_e( 'Colonnes admin', '360tranquilite' ); ?></th>
-            <td>
-                <?php TRQ_Admin::toggle( 'toolkit_admin_columns_enabled', (bool) $core->get( 'toolkit_admin_columns_enabled', false ), __( 'Activer les colonnes personnalisees', '360tranquilite' ) ); ?><br><br>
-                <label for="trq_toolkit_admin_columns_post_types"><?php esc_html_e( 'Types de contenus (CSV)', '360tranquilite' ); ?></label><br>
-                <input id="trq_toolkit_admin_columns_post_types" type="text" class="regular-text" name="toolkit_admin_columns_post_types" value="<?php echo esc_attr( (string) $core->get( 'toolkit_admin_columns_post_types', 'post,page' ) ); ?>" placeholder="post,page,resource" />
-                <p class="description"><?php esc_html_e( 'Exemple: post,page,resource', '360tranquilite' ); ?></p>
-
-                <?php TRQ_Admin::toggle( 'toolkit_admin_column_id', (bool) $core->get( 'toolkit_admin_column_id', true ), __( 'Afficher la colonne ID', '360tranquilite' ) ); ?><br><br>
-                <?php TRQ_Admin::toggle( 'toolkit_admin_column_thumbnail', (bool) $core->get( 'toolkit_admin_column_thumbnail', true ), __( 'Afficher la colonne image', '360tranquilite' ) ); ?><br><br>
-                <?php TRQ_Admin::toggle( 'toolkit_admin_column_slug', (bool) $core->get( 'toolkit_admin_column_slug', true ), __( 'Afficher la colonne slug', '360tranquilite' ) ); ?><br><br>
-                <?php TRQ_Admin::toggle( 'toolkit_admin_column_modified', (bool) $core->get( 'toolkit_admin_column_modified', true ), __( 'Afficher la colonne date de modification', '360tranquilite' ) ); ?>
-            </td>
+            <td><?php TRQ_Admin::toggle( 'toolkit_enabled', (bool) $core->get( 'toolkit_enabled', false ), __( 'Activer la boite a outils dev', '360tranquilite' ) ); ?></td>
         </tr>
 
         <tr><th colspan="2"><h3><?php esc_html_e( 'Redirections de session', '360tranquilite' ); ?></h3></th></tr>

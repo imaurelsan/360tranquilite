@@ -40,16 +40,41 @@ class TRQ_Dev_Toolkit {
         add_filter( 'page_row_actions', [ $this, 'add_duplicate_action' ], 10, 2 );
         add_filter( 'media_row_actions', [ $this, 'add_media_replace_row_action' ], 10, 2 );
         add_action( 'add_meta_boxes_attachment', [ $this, 'register_attachment_media_replace_metabox' ] );
+        add_action( 'add_meta_boxes', [ $this, 'register_external_permalink_metaboxes' ] );
         add_action( 'admin_post_trq_duplicate_content', [ $this, 'handle_duplicate_content' ] );
         add_action( 'admin_post_trq_replace_media', [ $this, 'handle_replace_media' ] );
+        add_action( 'save_post', [ $this, 'save_external_permalink_meta' ], 10, 2 );
 
         add_action( 'wp_dashboard_setup', [ $this, 'maybe_disable_default_dashboard_widgets' ], 99 );
         add_action( 'admin_head', [ $this, 'inject_admin_css' ], 99 );
+        add_action( 'admin_bar_menu', [ $this, 'cleanup_admin_bar_nodes' ], 99 );
+        add_action( 'admin_menu', [ $this, 'maybe_hide_comments_menu' ], 99 );
+        add_action( 'admin_menu', [ $this, 'apply_admin_menu_cleanup' ], 999 );
+        add_filter( 'custom_menu_order', [ $this, 'enable_custom_menu_order' ] );
+        add_filter( 'menu_order', [ $this, 'filter_admin_menu_order' ] );
         add_action( 'wp_head', [ $this, 'inject_front_assets' ], 99 );
         add_action( 'wp_footer', [ $this, 'inject_footer_code' ], 99 );
         add_action( 'init', [ $this, 'register_dynamic_content_types' ], 9 );
+        add_action( 'init', [ $this, 'maybe_apply_staging_search_visibility' ], 11 );
+        add_action( 'init', [ $this, 'maybe_disable_comments_features' ], 12 );
         add_action( 'init', [ $this, 'register_admin_columns_hooks' ], 20 );
         add_action( 'pre_get_posts', [ $this, 'apply_admin_columns_sorting' ] );
+        add_action( 'restrict_manage_posts', [ $this, 'render_taxonomy_filters' ] );
+        add_filter( 'parse_query', [ $this, 'apply_taxonomy_filters' ] );
+        add_filter( 'get_terms_args', [ $this, 'filter_terms_ordering' ], 20, 2 );
+        add_filter( 'show_admin_bar', [ $this, 'filter_show_admin_bar' ] );
+        add_filter( 'admin_footer_text', [ $this, 'filter_admin_footer_text' ], 20 );
+        add_filter( 'update_footer', [ $this, 'filter_admin_footer_version' ], 20 );
+        add_filter( 'wp_robots', [ $this, 'filter_wp_robots_staging' ], 20 );
+        add_action( 'admin_notices', [ $this, 'print_staging_noindex_notice' ] );
+        add_filter( 'manage_users_columns', [ $this, 'filter_users_columns' ] );
+        add_filter( 'manage_users_custom_column', [ $this, 'render_users_custom_column' ], 10, 3 );
+        add_filter( 'manage_users_sortable_columns', [ $this, 'filter_users_sortable_columns' ] );
+        add_action( 'pre_get_users', [ $this, 'sort_users_by_last_login' ] );
+        add_filter( 'post_type_link', [ $this, 'filter_post_type_permalink' ], 10, 2 );
+        add_filter( 'post_link', [ $this, 'filter_post_permalink' ], 10, 3 );
+        add_filter( 'page_link', [ $this, 'filter_page_permalink' ], 10, 2 );
+        add_action( 'template_redirect', [ $this, 'maybe_redirect_external_permalink' ], 1 );
 
         // Wrapper protective pour contourner les opcodes périmés sur serveurs agressifs
         add_filter(
@@ -79,9 +104,15 @@ class TRQ_Dev_Toolkit {
         add_filter( 'heartbeat_settings', [ $this, 'filter_heartbeat_settings' ] );
         add_filter( 'wp_revisions_to_keep', [ $this, 'filter_revisions_to_keep' ], 10, 2 );
         add_filter( 'robots_txt', [ $this, 'filter_robots_txt' ], 99, 2 );
+        add_filter( 'comments_open', [ $this, 'filter_comments_open' ], 20, 2 );
+        add_filter( 'pings_open', [ $this, 'filter_comments_open' ], 20, 2 );
 
         add_action( 'parse_request', [ $this, 'serve_ads_files' ] );
         add_filter( 'the_content', [ $this, 'obfuscate_emails' ], 20 );
+        add_filter( 'the_content', [ $this, 'rewrite_external_links_in_html' ], 25 );
+        add_filter( 'widget_text_content', [ $this, 'rewrite_external_links_in_html' ], 25 );
+        add_filter( 'wp_nav_menu_objects', [ $this, 'adjust_external_menu_item_targets' ], 20, 2 );
+        add_action( 'template_redirect', [ $this, 'maybe_block_feed_requests' ], 1 );
     }
 
     private function is_enabled(): bool {
@@ -94,6 +125,17 @@ class TRQ_Dev_Toolkit {
 
     private function is_media_replacer_enabled(): bool {
         return $this->is_enabled() && (bool) TRQ_Core::get_instance()->get( 'toolkit_media_replacer_enabled', false );
+    }
+
+    private function is_external_permalink_enabled(): bool {
+        return $this->is_enabled() && (bool) TRQ_Core::get_instance()->get( 'toolkit_external_permalink_enabled', false );
+    }
+
+    private function is_external_link_rewrite_enabled(): bool {
+        return $this->is_enabled() && (
+            (bool) TRQ_Core::get_instance()->get( 'toolkit_external_links_new_tab', false ) ||
+            (bool) TRQ_Core::get_instance()->get( 'toolkit_external_links_nofollow', false )
+        );
     }
 
     /**
@@ -328,6 +370,314 @@ class TRQ_Dev_Toolkit {
         if ( 'trq_modified' === $orderby ) {
             $query->set( 'orderby', 'modified' );
         }
+    }
+
+    public function filter_users_columns( array $columns ): array {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_users_last_login_column', false ) ) {
+            return $columns;
+        }
+
+        $result = [];
+        foreach ( $columns as $key => $label ) {
+            $result[ $key ] = $label;
+            if ( 'email' === $key ) {
+                $result['trq_last_login'] = __( 'Derniere connexion', '360tranquilite' );
+            }
+        }
+
+        if ( ! isset( $result['trq_last_login'] ) ) {
+            $result['trq_last_login'] = __( 'Derniere connexion', '360tranquilite' );
+        }
+
+        return $result;
+    }
+
+    public function render_users_custom_column( string $value, string $column_name, int $user_id ): string {
+        if ( 'trq_last_login' !== $column_name ) {
+            return $value;
+        }
+
+        $last_login = (string) get_user_meta( $user_id, 'trq_last_login_at', true );
+        if ( '' === $last_login ) {
+            return '&mdash;';
+        }
+
+        return esc_html( get_date_from_gmt( $last_login, 'Y-m-d H:i' ) );
+    }
+
+    public function filter_users_sortable_columns( array $sortable ): array {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_users_last_login_column', false ) ) {
+            return $sortable;
+        }
+
+        $sortable['trq_last_login'] = 'trq_last_login';
+        return $sortable;
+    }
+
+    public function sort_users_by_last_login( WP_User_Query $query ): void {
+        if ( ! is_admin() || ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_users_last_login_column', false ) ) {
+            return;
+        }
+
+        $orderby = (string) $query->get( 'orderby' );
+        if ( 'trq_last_login' !== $orderby ) {
+            return;
+        }
+
+        $query->set( 'meta_key', 'trq_last_login_at' );
+        $query->set( 'orderby', 'meta_value' );
+    }
+
+    public function render_taxonomy_filters(): void {
+        if ( ! is_admin() || ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_taxonomy_filters_enabled', false ) ) {
+            return;
+        }
+
+        $screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+        if ( ! $screen || 'edit' !== $screen->base ) {
+            return;
+        }
+
+        $post_type = (string) ( $screen->post_type ?? '' );
+        if ( '' === $post_type || ! $this->is_tax_filter_post_type_allowed( $post_type ) ) {
+            return;
+        }
+
+        $taxonomies = get_object_taxonomies( $post_type, 'objects' );
+        if ( empty( $taxonomies ) ) {
+            return;
+        }
+
+        foreach ( $taxonomies as $taxonomy => $taxonomy_obj ) {
+            if ( ! isset( $taxonomy_obj->show_admin_column ) || ! $taxonomy_obj->show_admin_column ) {
+                continue;
+            }
+
+            $current = isset( $_GET[ $taxonomy ] ) ? sanitize_text_field( wp_unslash( $_GET[ $taxonomy ] ) ) : '';
+            wp_dropdown_categories(
+                [
+                    'show_option_all' => sprintf( __( 'Tous: %s', '360tranquilite' ), $taxonomy_obj->labels->name ),
+                    'taxonomy'        => $taxonomy,
+                    'name'            => $taxonomy,
+                    'orderby'         => 'name',
+                    'selected'        => $current,
+                    'hierarchical'    => true,
+                    'depth'           => 3,
+                    'show_count'      => false,
+                    'hide_empty'      => false,
+                    'value_field'     => 'slug',
+                ]
+            );
+        }
+    }
+
+    public function apply_taxonomy_filters( $query ) {
+        if ( ! is_admin() || ! $query instanceof WP_Query || ! $query->is_main_query() ) {
+            return $query;
+        }
+
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_taxonomy_filters_enabled', false ) ) {
+            return $query;
+        }
+
+        global $pagenow;
+        if ( 'edit.php' !== $pagenow ) {
+            return $query;
+        }
+
+        $post_type = isset( $_GET['post_type'] ) ? sanitize_key( (string) wp_unslash( $_GET['post_type'] ) ) : 'post';
+        if ( ! $this->is_tax_filter_post_type_allowed( $post_type ) ) {
+            return $query;
+        }
+
+        $tax_query = [];
+        $taxonomies = get_object_taxonomies( $post_type );
+        foreach ( $taxonomies as $taxonomy ) {
+            $value = isset( $_GET[ $taxonomy ] ) ? sanitize_text_field( wp_unslash( $_GET[ $taxonomy ] ) ) : '';
+            if ( '' === $value || '0' === $value ) {
+                continue;
+            }
+
+            $tax_query[] = [
+                'taxonomy' => $taxonomy,
+                'field'    => 'slug',
+                'terms'    => [ $value ],
+            ];
+        }
+
+        if ( ! empty( $tax_query ) ) {
+            if ( count( $tax_query ) > 1 ) {
+                $tax_query['relation'] = 'AND';
+            }
+            $query->set( 'tax_query', $tax_query );
+        }
+
+        return $query;
+    }
+
+    private function is_tax_filter_post_type_allowed( string $post_type ): bool {
+        $raw = (string) TRQ_Core::get_instance()->get( 'toolkit_taxonomy_filters_post_types', 'post,page' );
+        $allowed = array_values(
+            array_filter(
+                array_map( 'sanitize_key', explode( ',', $raw ) )
+            )
+        );
+
+        if ( empty( $allowed ) ) {
+            $allowed = [ 'post', 'page' ];
+        }
+
+        return in_array( $post_type, $allowed, true );
+    }
+
+    public function filter_terms_ordering( array $args, array $taxonomies ): array {
+        unset( $taxonomies );
+
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_taxonomy_terms_order_enabled', false ) ) {
+            return $args;
+        }
+
+        if ( isset( $args['orderby'] ) && ! in_array( (string) $args['orderby'], [ '', 'name', 'none' ], true ) ) {
+            return $args;
+        }
+
+        $orderby = (string) TRQ_Core::get_instance()->get( 'toolkit_taxonomy_terms_orderby', 'name' );
+        if ( ! in_array( $orderby, [ 'name', 'slug', 'count', 'term_id' ], true ) ) {
+            $orderby = 'name';
+        }
+
+        $order = strtoupper( (string) TRQ_Core::get_instance()->get( 'toolkit_taxonomy_terms_order', 'ASC' ) );
+        if ( ! in_array( $order, [ 'ASC', 'DESC' ], true ) ) {
+            $order = 'ASC';
+        }
+
+        $args['orderby'] = $orderby;
+        $args['order'] = $order;
+
+        return $args;
+    }
+
+    private function parse_csv_slugs( string $raw ): array {
+        return array_values(
+            array_filter(
+                array_map( 'sanitize_key', array_map( 'trim', explode( ',', $raw ) ) )
+            )
+        );
+    }
+
+    public function apply_admin_menu_cleanup(): void {
+        if ( ! is_admin() || ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_admin_menu_cleanup_enabled', false ) ) {
+            return;
+        }
+
+        $slugs = $this->parse_csv_slugs( (string) TRQ_Core::get_instance()->get( 'toolkit_admin_menu_hidden_slugs', '' ) );
+        foreach ( $slugs as $slug ) {
+            remove_menu_page( $slug );
+        }
+    }
+
+    public function enable_custom_menu_order( $enabled ) {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_admin_menu_reorder_enabled', false ) ) {
+            return $enabled;
+        }
+
+        return true;
+    }
+
+    public function filter_admin_menu_order( $menu_order ) {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_admin_menu_reorder_enabled', false ) ) {
+            return $menu_order;
+        }
+
+        if ( ! is_array( $menu_order ) ) {
+            return $menu_order;
+        }
+
+        $desired = $this->parse_csv_slugs( (string) TRQ_Core::get_instance()->get( 'toolkit_admin_menu_order', '' ) );
+        if ( empty( $desired ) ) {
+            return $menu_order;
+        }
+
+        $result = [];
+        foreach ( $desired as $slug ) {
+            if ( in_array( $slug, $menu_order, true ) ) {
+                $result[] = $slug;
+            }
+        }
+
+        foreach ( $menu_order as $slug ) {
+            if ( ! in_array( $slug, $result, true ) ) {
+                $result[] = $slug;
+            }
+        }
+
+        return $result;
+    }
+
+    private function is_staging_environment_detected(): bool {
+        $host = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+        if ( '' === $host ) {
+            return false;
+        }
+
+        $patterns = array_values(
+            array_filter(
+                array_map( 'trim', explode( ',', (string) TRQ_Core::get_instance()->get( 'toolkit_staging_patterns', 'staging.,dev.,localhost,.local,.test' ) ) )
+            )
+        );
+
+        foreach ( $patterns as $pattern ) {
+            if ( '' !== $pattern && false !== strpos( $host, strtolower( $pattern ) ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function maybe_apply_staging_search_visibility(): void {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_staging_noindex_enabled', false ) ) {
+            return;
+        }
+
+        if ( ! $this->is_staging_environment_detected() ) {
+            return;
+        }
+
+        if ( TRQ_Core::get_instance()->get( 'toolkit_staging_set_blog_public_zero', false ) && (int) get_option( 'blog_public', 1 ) !== 0 ) {
+            update_option( 'blog_public', 0 );
+            update_option( 'trq_staging_noindex_applied_at', current_time( 'mysql', true ), false );
+        }
+    }
+
+    public function filter_wp_robots_staging( array $robots ): array {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_staging_noindex_enabled', false ) ) {
+            return $robots;
+        }
+
+        if ( ! $this->is_staging_environment_detected() ) {
+            return $robots;
+        }
+
+        $robots['noindex'] = true;
+        $robots['nofollow'] = true;
+        $robots['noarchive'] = true;
+
+        return $robots;
+    }
+
+    public function print_staging_noindex_notice(): void {
+        if ( ! is_admin() || ! current_user_can( 'manage_options' ) || ! $this->is_enabled() ) {
+            return;
+        }
+
+        if ( ! TRQ_Core::get_instance()->get( 'toolkit_staging_noindex_enabled', false ) || ! $this->is_staging_environment_detected() ) {
+            return;
+        }
+
+        echo '<div class="notice notice-warning is-dismissible"><p>'
+            . esc_html__( '360 Tranquillite: environnement staging detecte, directives noindex/nofollow actives.', '360tranquilite' )
+            . '</p></div>';
     }
 
     public function configure_phpmailer( $phpmailer ): void {
@@ -730,6 +1080,21 @@ class TRQ_Dev_Toolkit {
         $hide_notices = (bool) TRQ_Core::get_instance()->get( 'toolkit_hide_admin_notices', false );
 
         if ( ! $hide_notices && '' === trim( $custom_css ) ) {
+            $custom_css = '';
+        }
+
+        $menu_width = max( 160, min( 360, (int) TRQ_Core::get_instance()->get( 'toolkit_admin_menu_width', 160 ) ) );
+        $menu_css = '';
+        if ( $menu_width !== 160 ) {
+            $menu_folded_width = max( 56, (int) floor( $menu_width * 0.22 ) );
+            $menu_css = '#adminmenuwrap,#adminmenu,.folded #adminmenu,.folded #adminmenu li.menu-top{width:' . $menu_width . 'px;}'
+                . '#adminmenu .wp-submenu{left:' . $menu_width . 'px;}'
+                . '#wpcontent,#wpfooter{margin-left:' . $menu_width . 'px;}'
+                . '.auto-fold #adminmenu,.auto-fold #adminmenu li.menu-top,.auto-fold #adminmenuback,.auto-fold #adminmenuwrap{width:' . $menu_folded_width . 'px;}'
+                . '.auto-fold #wpcontent,.auto-fold #wpfooter{margin-left:' . $menu_folded_width . 'px;}';
+        }
+
+        if ( '' === $menu_css && ! $hide_notices && '' === trim( $custom_css ) ) {
             return;
         }
 
@@ -737,10 +1102,71 @@ class TRQ_Dev_Toolkit {
         if ( $hide_notices ) {
             echo '.notice:not(.notice-error):not(.notice-warning):not(.update-nag), .update-nag{display:none !important;}';
         }
+        if ( '' !== $menu_css ) {
+            echo $menu_css;
+        }
         if ( '' !== trim( $custom_css ) ) {
             echo wp_strip_all_tags( $custom_css );
         }
         echo '</style>';
+    }
+
+    public function filter_show_admin_bar( bool $show ): bool {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_hide_front_admin_bar', false ) ) {
+            return $show;
+        }
+
+        if ( is_admin() || current_user_can( 'manage_options' ) ) {
+            return $show;
+        }
+
+        return false;
+    }
+
+    public function cleanup_admin_bar_nodes( WP_Admin_Bar $wp_admin_bar ): void {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_admin_bar_cleanup_enabled', false ) ) {
+            return;
+        }
+
+        if ( TRQ_Core::get_instance()->get( 'toolkit_admin_bar_remove_wp_logo', false ) ) {
+            $wp_admin_bar->remove_node( 'wp-logo' );
+        }
+        if ( TRQ_Core::get_instance()->get( 'toolkit_admin_bar_remove_comments', false ) ) {
+            $wp_admin_bar->remove_node( 'comments' );
+        }
+        if ( TRQ_Core::get_instance()->get( 'toolkit_admin_bar_remove_new_content', false ) ) {
+            $wp_admin_bar->remove_node( 'new-content' );
+        }
+        if ( TRQ_Core::get_instance()->get( 'toolkit_admin_bar_remove_updates', false ) ) {
+            $wp_admin_bar->remove_node( 'updates' );
+        }
+    }
+
+    public function maybe_hide_comments_menu(): void {
+        if ( ! $this->is_enabled() ) {
+            return;
+        }
+
+        if ( TRQ_Core::get_instance()->get( 'toolkit_disable_comments', false ) || in_array( 'edit-comments.php', $this->parse_csv_slugs( (string) TRQ_Core::get_instance()->get( 'toolkit_admin_menu_hidden_slugs', '' ) ), true ) ) {
+            remove_menu_page( 'edit-comments.php' );
+        }
+    }
+
+    public function filter_admin_footer_text( string $text ): string {
+        if ( ! is_admin() || ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_admin_footer_text_enabled', false ) ) {
+            return $text;
+        }
+
+        $custom_text = trim( (string) TRQ_Core::get_instance()->get( 'toolkit_admin_footer_text', '' ) );
+        return '' !== $custom_text ? esc_html( $custom_text ) : $text;
+    }
+
+    public function filter_admin_footer_version( string $text ): string {
+        if ( ! is_admin() || ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_admin_footer_text_enabled', false ) ) {
+            return $text;
+        }
+
+        return '';
     }
 
     public function inject_front_assets(): void {
@@ -865,6 +1291,41 @@ class TRQ_Dev_Toolkit {
         return '' !== trim( $custom ) ? trim( $custom ) . "\n" : $output;
     }
 
+    public function maybe_disable_comments_features(): void {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_disable_comments', false ) ) {
+            return;
+        }
+
+        foreach ( get_post_types( [ 'public' => true ], 'names' ) as $post_type ) {
+            if ( post_type_supports( $post_type, 'comments' ) ) {
+                remove_post_type_support( $post_type, 'comments' );
+            }
+            if ( post_type_supports( $post_type, 'trackbacks' ) ) {
+                remove_post_type_support( $post_type, 'trackbacks' );
+            }
+        }
+    }
+
+    public function filter_comments_open( bool $open, int $post_id ): bool {
+        unset( $post_id );
+
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_disable_comments', false ) ) {
+            return $open;
+        }
+
+        return false;
+    }
+
+    public function maybe_block_feed_requests(): void {
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_disable_feeds', false ) ) {
+            return;
+        }
+
+        if ( is_feed() ) {
+            wp_die( esc_html__( 'Les flux RSS sont désactivés.', '360tranquilite' ), '', [ 'response' => 403 ] );
+        }
+    }
+
     public function serve_ads_files( WP $wp ): void {
         if ( ! $this->is_enabled() ) {
             return;
@@ -905,5 +1366,197 @@ class TRQ_Dev_Toolkit {
             },
             $content
         ) ?: $content;
+    }
+
+    public function rewrite_external_links_in_html( string $content ): string {
+        if ( ! $this->is_external_link_rewrite_enabled() || '' === trim( $content ) ) {
+            return $content;
+        }
+
+        if ( false === stripos( $content, '<a ' ) ) {
+            return $content;
+        }
+
+        $home_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+        $open_new_tab = (bool) TRQ_Core::get_instance()->get( 'toolkit_external_links_new_tab', false );
+        $nofollow = (bool) TRQ_Core::get_instance()->get( 'toolkit_external_links_nofollow', false );
+
+        $pattern = '/<a\b([^>]*?)href=("|\')(https?:\/\/[^\"\']+)\2([^>]*)>/i';
+
+        return preg_replace_callback(
+            $pattern,
+            static function ( array $matches ) use ( $home_host, $open_new_tab, $nofollow ): string {
+                $full = $matches[0];
+                $url = (string) $matches[3];
+                $host = (string) wp_parse_url( $url, PHP_URL_HOST );
+
+                if ( '' === $host || ( '' !== $home_host && strtolower( $host ) === strtolower( $home_host ) ) ) {
+                    return $full;
+                }
+
+                $attrs = $matches[1] . 'href=' . $matches[2] . $url . $matches[2] . $matches[4];
+
+                if ( $open_new_tab && ! preg_match( '/\btarget\s*=\s*("|\')_blank\1/i', $attrs ) ) {
+                    $attrs .= ' target="_blank"';
+                }
+
+                if ( $open_new_tab || $nofollow ) {
+                    $rels = [];
+                    if ( preg_match( '/\brel\s*=\s*("|\')(.*?)\1/i', $attrs, $rel_match ) ) {
+                        $rels = preg_split( '/\s+/', strtolower( trim( (string) $rel_match[2] ) ) ) ?: [];
+                        $rels = array_values( array_filter( $rels ) );
+                        $attrs = str_replace( $rel_match[0], '', $attrs );
+                    }
+
+                    if ( $open_new_tab ) {
+                        $rels[] = 'noopener';
+                        $rels[] = 'noreferrer';
+                    }
+                    if ( $nofollow ) {
+                        $rels[] = 'nofollow';
+                    }
+
+                    $rels = array_values( array_unique( $rels ) );
+                    if ( ! empty( $rels ) ) {
+                        $attrs .= ' rel="' . esc_attr( implode( ' ', $rels ) ) . '"';
+                    }
+                }
+
+                return '<a ' . trim( $attrs ) . '>';
+            },
+            $content
+        ) ?: $content;
+    }
+
+    public function adjust_external_menu_item_targets( array $items, stdClass $args ): array {
+        unset( $args );
+
+        if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_external_permalink_new_tab', false ) ) {
+            return $items;
+        }
+
+        $home_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+        foreach ( $items as $item ) {
+            if ( ! $item instanceof WP_Post ) {
+                continue;
+            }
+
+            $url = (string) ( $item->url ?? '' );
+            $host = (string) wp_parse_url( $url, PHP_URL_HOST );
+            if ( '' === $host || ( '' !== $home_host && strtolower( $host ) === strtolower( $home_host ) ) ) {
+                continue;
+            }
+
+            $item->target = '_blank';
+            $rels = is_array( $item->xfn ) ? $item->xfn : preg_split( '/\s+/', (string) $item->xfn );
+            $rels = is_array( $rels ) ? $rels : [];
+            $rels[] = 'noopener';
+            $rels[] = 'noreferrer';
+            $item->xfn = implode( ' ', array_values( array_unique( array_filter( $rels ) ) ) );
+        }
+
+        return $items;
+    }
+
+    public function register_external_permalink_metaboxes(): void {
+        if ( ! is_admin() || ! $this->is_external_permalink_enabled() ) {
+            return;
+        }
+
+        foreach ( get_post_types( [ 'public' => true ], 'objects' ) as $post_type => $object ) {
+            if ( 'attachment' === $post_type || empty( $object->show_ui ) ) {
+                continue;
+            }
+
+            add_meta_box(
+                'trq-external-permalink',
+                __( 'Permalien externe', '360tranquilite' ),
+                [ $this, 'render_external_permalink_metabox' ],
+                $post_type,
+                'side',
+                'default'
+            );
+        }
+    }
+
+    public function render_external_permalink_metabox( WP_Post $post ): void {
+        $url = (string) get_post_meta( $post->ID, '_trq_external_url', true );
+        wp_nonce_field( 'trq_external_permalink_save_' . $post->ID, 'trq_external_permalink_nonce' );
+
+        echo '<p>' . esc_html__( 'Si renseigné, ce contenu utilisera une URL externe.', '360tranquilite' ) . '</p>';
+        echo '<input type="url" class="widefat" name="trq_external_url" value="' . esc_attr( $url ) . '" placeholder="https://example.com/page" />';
+    }
+
+    public function save_external_permalink_meta( int $post_id, WP_Post $post ): void {
+        if ( ! $this->is_external_permalink_enabled() || wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+            return;
+        }
+
+        if ( 'attachment' === $post->post_type ) {
+            return;
+        }
+
+        $nonce = sanitize_text_field( (string) ( $_POST['trq_external_permalink_nonce'] ?? '' ) );
+        if ( '' === $nonce || ! wp_verify_nonce( $nonce, 'trq_external_permalink_save_' . $post_id ) ) {
+            return;
+        }
+
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        $url = isset( $_POST['trq_external_url'] ) ? esc_url_raw( (string) wp_unslash( $_POST['trq_external_url'] ) ) : '';
+        if ( '' === $url ) {
+            delete_post_meta( $post_id, '_trq_external_url' );
+            return;
+        }
+
+        update_post_meta( $post_id, '_trq_external_url', $url );
+    }
+
+    public function filter_post_type_permalink( string $permalink, WP_Post $post ): string {
+        return $this->get_external_permalink_or_default( $permalink, $post );
+    }
+
+    public function filter_post_permalink( string $permalink, WP_Post $post, bool $leavename ): string {
+        unset( $leavename );
+        return $this->get_external_permalink_or_default( $permalink, $post );
+    }
+
+    public function filter_page_permalink( string $link, int $post_id ): string {
+        $post = get_post( $post_id );
+        if ( ! $post instanceof WP_Post ) {
+            return $link;
+        }
+
+        return $this->get_external_permalink_or_default( $link, $post );
+    }
+
+    private function get_external_permalink_or_default( string $fallback, WP_Post $post ): string {
+        if ( ! $this->is_external_permalink_enabled() ) {
+            return $fallback;
+        }
+
+        $external = esc_url_raw( (string) get_post_meta( $post->ID, '_trq_external_url', true ) );
+        return '' !== $external ? $external : $fallback;
+    }
+
+    public function maybe_redirect_external_permalink(): void {
+        if ( ! $this->is_external_permalink_enabled() || ! is_singular() ) {
+            return;
+        }
+
+        $post = get_queried_object();
+        if ( ! $post instanceof WP_Post ) {
+            return;
+        }
+
+        $external = esc_url_raw( (string) get_post_meta( $post->ID, '_trq_external_url', true ) );
+        if ( '' === $external ) {
+            return;
+        }
+
+        wp_redirect( $external, 301 );
+        exit;
     }
 }

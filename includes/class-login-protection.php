@@ -333,6 +333,9 @@ class TRQ_Login_Protection {
             ],
             [ '%s', '%s', '%s', '%d' ]
         );
+
+        update_user_meta( $user->ID, 'trq_last_login_at', current_time( 'mysql', true ) );
+        update_user_meta( $user->ID, 'trq_last_login_ip', TRQ_Core::get_client_ip() );
     }
 
     private function count_recent_failures( string $ip, int $window_minutes ): int {
