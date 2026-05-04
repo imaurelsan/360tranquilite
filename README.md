@@ -6,7 +6,7 @@ Site : https://yaurel.com
 
 Support : aurelandyou@gmail.com
 
-Contexte de reprise du projet : voir PROJECT_CONTEXT_RECOVERY.md à la racine du plugin.
+Contexte de reprise du projet : voir docs/PROJECT_CONTEXT_RECOVERY.md.
 
 ## Installation
 
@@ -36,7 +36,7 @@ Notes importantes :
 
 Workflow de release recommandé :
 
-1. Incrémenter la version du plugin (`360tranquilite.php` + `CHANGELOG.md`)
+1. Incrémenter la version du plugin (`360tranquilite.php` + `docs/CHANGELOG.md`)
 2. Commit et push sur GitHub
 3. Créer un tag (ex: `v1.8.2`)
 4. Publier une GitHub Release sur ce tag
@@ -50,6 +50,10 @@ pwsh -File .\scripts\build-release-zip.ps1
 ```
 
 Le script produit `dist/360tranquilite.zip` avec une structure WordPress correcte.
+
+Process de deploiement prive vers public (commandes terminal + checklist fusionnee):
+
+- voir `docs/GUIDE_SYNC_PRIVATE_TO_PUBLIC.md`
 
 ### Langue du plugin
 
@@ -109,7 +113,7 @@ Dans **360 Tranquillité → Connexion**, vous pouvez maintenant personnaliser e
 
 ### 3. QR Code pour la 2FA
 Le fichier est déjà intégré dans `assets/js/qrcode.min.js`.
-Il correspond à QRCode.js (licence MIT). Voir `THIRD_PARTY_NOTICES.md`.
+Il correspond à QRCode.js (licence MIT). Voir `docs/THIRD_PARTY_NOTICES.md`.
 
 ### 4. Pourquoi l’installation d’extensions peut être bloquée
 Si l’option de durcissement `DISALLOW_FILE_MODS` est activée dans **360 Tranquillité → Avancé**, WordPress bloque l’installation, la mise à jour et la suppression des extensions et thèmes depuis l’admin.
@@ -179,7 +183,7 @@ Note importante :
 │       ├── page-toolkit.php        ← Boîte à outils développeurs
 │       ├── page-advanced.php       ← Headers, file monitor, divers
 │       └── page-about.php          ← Présentation, support, changelog
-├── CHANGELOG.md                    ← Historique public des versions
+├── docs/CHANGELOG.md               ← Historique public des versions
 ├── uninstall.php                   ← Désinstallation propre
 └── assets/
     ├── js/qrcode.min.js            ← Bibliothèque QR Code déjà incluse
@@ -235,7 +239,7 @@ La désactivation puis suppression du plugin via wp-admin **supprime automatique
 
 - Plugin : GPL v2 or later
 - Bibliothèque tierce embarquée : QRCode.js sous licence MIT
-- Détails : `LICENSE` et `THIRD_PARTY_NOTICES.md`
+- Détails : `LICENSE` et `docs/THIRD_PARTY_NOTICES.md`
 
 Vous pouvez aussi ajouter, si vous le souhaitez plus tard :
 

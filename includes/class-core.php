@@ -252,6 +252,8 @@ class TRQ_Core {
         $this->settings = $this->load_settings();
         add_filter( 'plugin_locale', [ $this, 'filter_plugin_locale' ], 10, 2 );
         TRQ_Localization::get_instance()->init();
+        add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_upload_js_fix' ] );
+        add_action( 'admin_head', [ $this, 'print_upload_notice_css_fix' ] );
 
         add_action( 'trq_cleanup_data', [ __CLASS__, 'cleanup_old_data' ] );
 
@@ -323,12 +325,46 @@ class TRQ_Core {
 
         TRQ_Auto_Updates::get_instance()->init();
         TRQ_Media_Cleanup::get_instance()->init();
-        TRQ_Dev_Toolkit::get_instance()->init();
+        if ( ! $this->is_media_library_request() ) {
+            TRQ_Dev_Toolkit::get_instance()->init();
+        }
 
         // Interface admin
         if ( is_admin() ) {
             TRQ_Admin::get_instance()->init();
         }
+    }
+
+    private function is_media_library_request(): bool {
+        if ( ! is_admin() ) {
+            return false;
+        }
+
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+        return false !== strpos( $request_uri, '/wp-admin/upload.php' );
+    }
+
+    public function enqueue_upload_js_fix( string $hook ): void {
+        if ( 'upload.php' !== $hook ) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'trq-upload-js-fix',
+            TRQ_PLUGIN_URL . 'assets/js/trq-upload-js-fix.js',
+            [],
+            TRQ_VERSION,
+            false
+        );
+    }
+
+    public function print_upload_notice_css_fix(): void {
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+        if ( false === strpos( $request_uri, '/wp-admin/upload.php' ) ) {
+            return;
+        }
+
+        echo '<style>.upload-php .notice.hide-if-js{display:none!important;}</style>';
     }
 
     // -----------------------------------------------------------------------

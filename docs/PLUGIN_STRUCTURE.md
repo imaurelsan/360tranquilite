@@ -1,0 +1,109 @@
+﻿# Arborescence complete du plugin
+
+Ce document sert de reference rapide pour localiser les fichiers du projet.
+Derniere mise a jour: 2026-05-04 04:03
+
+## Structure
+
+```text
+360tranquilite-private/
+- admin/
+  - assets/
+    - css/
+      - admin.css
+    - js/
+      - admin.js
+  - views/
+    - page-about.php
+    - page-adminui.php
+    - page-advanced.php
+    - page-backups.php
+    - page-cloudflare.php
+    - page-content.php
+    - page-dashboard.php
+    - page-firewall.php
+    - page-login.php
+    - page-media.php
+    - page-toolkit.php
+    - page-twofactor.php
+    - page-updates.php
+  - class-admin.php
+- assets/
+  - js/
+    - qrcode.min.js
+  - logo-360tranquilite.png
+  - logo-360tranquilite.svg
+- connector/
+  - 360tranq-gdrive-connector/
+    - access-token/
+      - index.php
+    - connect/
+      - index.php
+    - exchange/
+      - index.php
+    - google-callback/
+      - index.php
+    - storage/
+      - codes/
+        - index.php
+      - tokens/
+        - index.php
+      - index.php
+    - bootstrap.php
+    - config.sample.php
+    - index.php
+- dist/
+  - 360tranquilite.zip
+- docs/
+  - forensic-report/
+    - 01_uploads_executable_files.csv
+    - 02_suspicious_names.csv
+    - 03_suspicious_directories.csv
+    - 04_code_pattern_hits.csv
+    - 05_recent_files_top400.csv
+    - 06_core_changed.csv
+    - 06_core_checksum_error.txt
+    - 06_core_extra.csv
+    - 06_core_missing.csv
+    - 07_plugins_themes_php_like.csv
+    - 08_mu_plugins.csv
+  - CHANGELOG.md
+  - CONNECTOR_INSTALL_YAUREL.md
+  - forensic-highsignal.txt
+  - GOOGLE_DRIVE_CONNECTOR.md
+  - GUIDE_SYNC_PRIVATE_TO_PUBLIC.md
+  - PLUGIN_STRUCTURE.md
+  - PROJECT_CONTEXT_RECOVERY.md
+  - THIRD_PARTY_NOTICES.md
+  - WORDPRESS_ORG_SUBMISSION.md
+- includes/
+  - class-antispam.php
+  - class-audit-log.php
+  - class-auto-updates.php
+  - class-backup-manager.php
+  - class-cloudflare.php
+  - class-core.php
+  - class-dev-toolkit.php
+  - class-file-monitor.php
+  - class-firewall.php
+  - class-github-updates.php
+  - class-localization.php
+  - class-login-protection.php
+  - class-media-cleanup.php
+  - class-security-headers.php
+  - class-system-scanner.php
+  - class-threat-definitions.php
+  - class-two-factor.php
+- languages/
+  - 360tranquilite.pot
+  - 360tranquilite-en_US.po
+  - 360tranquilite-fr_FR.po
+  - runtime-en_US.php
+- scripts/
+  - build-release-zip.ps1
+- 360tranquilite.php
+- LICENSE
+- README.md
+- readme.txt
+- uninstall.php
+```

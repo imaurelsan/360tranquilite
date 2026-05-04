@@ -530,7 +530,15 @@ class TRQ_Dev_Toolkit {
         return in_array( $post_type, $allowed, true );
     }
 
-    public function filter_terms_ordering( array $args, array $taxonomies ): array {
+    public function filter_terms_ordering( $args, $taxonomies ) {
+        if ( ! is_array( $args ) ) {
+            return $args;
+        }
+
+        if ( ! is_array( $taxonomies ) ) {
+            $taxonomies = [];
+        }
+
         unset( $taxonomies );
 
         if ( ! $this->is_enabled() || ! TRQ_Core::get_instance()->get( 'toolkit_taxonomy_terms_order_enabled', false ) ) {

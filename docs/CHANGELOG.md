@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables de 360 Tranquillité seront documentées dans ce fichier.
 
+## 1.10.11 - 2026-05-04
+- Bugfix: correction d'une erreur fatale sur la médiathèque (`/wp-admin/upload.php`) introduite par l'initialisation du module Dev Toolkit
+- Stabilisation admin: le Dev Toolkit n'est plus initialisé sur l'écran Médias (`upload.php`) pour éviter l'échec de chargement
+- UX admin: correctif JS/CSS ciblé sur la médiathèque pour éviter l'affichage intempestif de la notice liée à la vue grille
+
 ## 1.10.10 - 2026-04-05
 - Pare-feu: correction d'un faux positif sur les formulaires de connexion (les caractères spéciaux légitimes dans les identifiants/mots de passe ne déclenchent plus un blocage SQLi)
 - Pare-feu: bypass explicite du flux d'authentification WordPress (`wp-login.php`, slug de connexion personnalisé, mot de passe perdu/reset) pour éviter le blocage de connexions légitimes

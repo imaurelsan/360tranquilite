@@ -48,12 +48,12 @@ class TRQ_Admin {
             'twofactor'  => __( '2FA', '360tranquilite' ),
             'cloudflare' => __( 'Cloudflare', '360tranquilite' ),
             'backups'    => __( 'Sauvegardes', '360tranquilite' ),
-            'updates'    => __( 'Mises a jour', '360tranquilite' ),
+            'updates'    => __( 'Mises à jour', '360tranquilite' ),
             'media'      => __( 'Purge Medias', '360tranquilite' ),
             'content'    => __( 'Contenu', '360tranquilite' ),
             'adminui'    => __( 'Interface Admin', '360tranquilite' ),
-            'toolkit'    => __( 'Boite a Outils Dev', '360tranquilite' ),
-            'advanced'   => __( 'Avance', '360tranquilite' ),
+            'toolkit'    => __( 'Boîte à Outils Dev', '360tranquilite' ),
+            'advanced'   => __( 'Avancé', '360tranquilite' ),
             'about'      => __( 'A propos', '360tranquilite' ),
         ];
     }
