@@ -2,6 +2,11 @@
 
 Toutes les évolutions notables de 360 Tranquillité seront documentées dans ce fichier.
 
+## 1.10.12 - 2026-05-07
+- Bugfix sauvegardes: l'archive n'était pas conservée lorsque le stockage local était désactivé (Drive uniquement) et que WP_Filesystem() échouait en contexte cron — repli sur rename() natif + RuntimeException explicite si aucune destination n'est joignable
+- Bugfix sauvegardes: suppression d'un appel filesize() sur un fichier déjà supprimé (PHP warning silencieux)
+- Stabilité Dev Toolkit: le module n'initialise plus ses hooks lorsqu'il est désactivé dans les réglages (évite les erreurs fatales globales)
+
 ## 1.10.11 - 2026-05-04
 - Bugfix: correction d'une erreur fatale sur la médiathèque (`/wp-admin/upload.php`) introduite par l'initialisation du module Dev Toolkit
 - Stabilisation admin: le Dev Toolkit n'est plus initialisé sur l'écran Médias (`upload.php`) pour éviter l'échec de chargement

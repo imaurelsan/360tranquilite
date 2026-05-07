@@ -33,6 +33,10 @@ class TRQ_Dev_Toolkit {
             return;
         }
 
+        if ( ! $this->is_enabled() ) {
+            return;
+        }
+
         $this->booted = true;
 
         add_filter( 'upload_mimes', [ $this, 'filter_upload_mimes' ] );

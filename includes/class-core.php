@@ -325,7 +325,7 @@ class TRQ_Core {
 
         TRQ_Auto_Updates::get_instance()->init();
         TRQ_Media_Cleanup::get_instance()->init();
-        if ( ! $this->is_media_library_request() ) {
+        if ( ! $this->is_media_library_request() && $this->get( 'toolkit_enabled' ) ) {
             TRQ_Dev_Toolkit::get_instance()->init();
         }
 

@@ -360,8 +360,16 @@ class TRQ_Backup_Manager {
 
             if ( ! $keep_local && empty( $google_drive['uploaded'] ) && empty( $s3['uploaded'] ) ) {
                 $fallback_local_path = trailingslashit( $backup_dir ) . $archive_name;
+                $moved = false;
                 $filesystem = $this->get_filesystem();
-                if ( $filesystem && $filesystem->move( $archive_path, $fallback_local_path, true ) ) {
+                if ( $filesystem ) {
+                    $moved = (bool) $filesystem->move( $archive_path, $fallback_local_path, true );
+                }
+                if ( ! $moved ) {
+                    // WP_Filesystem indisponible en contexte cron : repli sur rename() natif PHP.
+                    $moved = @rename( $archive_path, $fallback_local_path );
+                }
+                if ( $moved ) {
                     $archive_path = $fallback_local_path;
                     $stored_locally = true;
                     if ( ! empty( $use_google_drive ) ) {
@@ -370,6 +378,8 @@ class TRQ_Backup_Manager {
                     if ( ! empty( $use_s3 ) ) {
                         $s3['message'] .= ' Une copie locale de secours a été conservée.';
                     }
+                } else {
+                    throw new RuntimeException( 'Aucune destination disponible pour la sauvegarde. Vérifiez votre connexion Google Drive ou activez le stockage local.' );
                 }
             }
 
@@ -400,7 +410,7 @@ class TRQ_Backup_Manager {
                 'archive_name'   => $archive_name,
                 'archive_path'   => $stored_locally ? $archive_path : '',
                 'stored_locally' => $stored_locally,
-                'archive_size'   => filesize( $archive_path ),
+                'archive_size'   => ( $stored_locally && file_exists( $archive_path ) ) ? filesize( $archive_path ) : 0,
                 'included_files' => count( $manifest_data['files'] ),
                 'scanned_files'  => (int) $manifest_data['scanned_files'],
                 'deleted_files'  => count( $manifest_data['deleted_files'] ),
@@ -1531,35 +1541,90 @@ class TRQ_Backup_Manager {
     }
 
     private function create_google_drive_file_with_metadata( string $access_token, array $metadata, string $path ): array {
-        $boundary = 'trqbackup-' . wp_generate_password( 12, false );
-        $body = '';
-        $body .= '--' . $boundary . "\r\n";
-        $body .= "Content-Type: application/json; charset=UTF-8\r\n\r\n";
-        $body .= wp_json_encode( $metadata ) . "\r\n";
-        $body .= '--' . $boundary . "\r\n";
-        $body .= "Content-Type: application/zip\r\n\r\n";
-        $body .= file_get_contents( $path ) . "\r\n";
-        $body .= '--' . $boundary . '--';
+        // Utilise l'upload resumable pour eviter de charger tout le fichier en memoire.
+        $file_size = filesize( $path );
+        if ( false === $file_size ) {
+            return [ 'success' => false, 'message' => 'Impossible de lire la taille du fichier a envoyer.' ];
+        }
 
-        $response = wp_remote_post(
-            add_query_arg( [ 'uploadType' => 'multipart', 'fields' => 'id,name' ], self::GOOGLE_UPLOAD_ENDPOINT ),
+        // Etape 1 : initier la session d upload resumable.
+        $init_response = wp_remote_post(
+            add_query_arg( [ 'uploadType' => 'resumable', 'fields' => 'id,name' ], self::GOOGLE_UPLOAD_ENDPOINT ),
             [
-                'timeout' => 90,
+                'timeout' => 30,
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $access_token,
-                    'Content-Type'  => 'multipart/related; boundary=' . $boundary,
+                    'Authorization'           => 'Bearer ' . $access_token,
+                    'Content-Type'            => 'application/json; charset=UTF-8',
+                    'X-Upload-Content-Type'   => 'application/zip',
+                    'X-Upload-Content-Length' => (string) $file_size,
                 ],
-                'body'    => $body,
+                'body' => wp_json_encode( $metadata ),
             ]
         );
 
-        if ( is_wp_error( $response ) ) {
-            return [ 'success' => false, 'message' => $response->get_error_message() ];
+        if ( is_wp_error( $init_response ) ) {
+            return [ 'success' => false, 'message' => $init_response->get_error_message() ];
         }
 
-        $payload = json_decode( wp_remote_retrieve_body( $response ), true );
+        $session_uri = wp_remote_retrieve_header( $init_response, 'location' );
+        if ( empty( $session_uri ) ) {
+            return [ 'success' => false, 'message' => 'Google Drive na pas retourne d URI de session resumable.' ];
+        }
+
+        // Etape 2 : envoyer le fichier en streaming via cURL sans le charger en memoire.
+        if ( ! function_exists( 'curl_init' ) ) {
+            return [ 'success' => false, 'message' => 'L extension cURL est requise pour l upload vers Google Drive.' ];
+        }
+
+        $fh = fopen( $path, 'rb' );
+        if ( false === $fh ) {
+            return [ 'success' => false, 'message' => 'Impossible d ouvrir l archive ZIP pour l envoi.' ];
+        }
+
+        $response_body = '';
+        $http_code     = 0;
+        $curl_error    = '';
+
+        $ch = curl_init( $session_uri );
+        curl_setopt_array( $ch, [
+            CURLOPT_PUT            => true,
+            CURLOPT_INFILE         => $fh,
+            CURLOPT_INFILESIZE     => $file_size,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 300,
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/zip',
+                'Content-Length: ' . $file_size,
+            ],
+        ] );
+
+        $response_body = curl_exec( $ch );
+        $http_code     = (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+
+        if ( curl_errno( $ch ) ) {
+            $curl_error = curl_error( $ch );
+        }
+        curl_close( $ch );
+        fclose( $fh );
+
+        if ( '' !== $curl_error ) {
+            return [ 'success' => false, 'message' => 'Erreur cURL lors de l upload : ' . $curl_error ];
+        }
+
+        if ( $http_code < 200 || $http_code >= 300 ) {
+            $detail = '';
+            if ( is_string( $response_body ) && '' !== $response_body ) {
+                $decoded = json_decode( $response_body, true );
+                $detail  = is_array( $decoded ) && isset( $decoded['error']['message'] )
+                    ? (string) $decoded['error']['message']
+                    : substr( $response_body, 0, 200 );
+            }
+            return [ 'success' => false, 'message' => 'Echec de l upload Google Drive (HTTP ' . $http_code . ')' . ( '' !== $detail ? ' : ' . $detail : '' ) . '.' ];
+        }
+
+        $payload = json_decode( is_string( $response_body ) ? $response_body : '', true );
         if ( empty( $payload['id'] ) ) {
-            return [ 'success' => false, 'message' => 'Réponse Google Drive invalide.' ];
+            return [ 'success' => false, 'message' => 'Reponse Google Drive invalide apres upload.' ];
         }
 
         return [ 'success' => true, 'file_id' => $payload['id'] ];
