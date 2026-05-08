@@ -3,7 +3,7 @@
  * Plugin Name:       360 Tranquillité
  * Plugin URI:        https://yaurel.com
  * Description:       Sécurité et continuité tout-en-un : Firewall WAF, anti-brute-force, 2FA TOTP, sauvegardes complètes/incrémentales locales ou cloud, restauration locale, URL de connexion personnalisée, Cloudflare, headers HTTP, surveillance d'intégrité et anti-spam.
- * Version:           1.10.12
+ * Version:           1.10.13
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Aurel Yahouedeou

@@ -594,7 +594,7 @@ class TRQ_Backup_Manager {
         }
 
         $state = wp_generate_password( 48, false, false );
-        set_transient( 'trq_google_drive_oauth_state_' . $user_id, $state, 10 * MINUTE_IN_SECONDS );
+        $this->store_google_drive_oauth_state( $state, $user_id );
 
         $url = add_query_arg(
             [
@@ -624,10 +624,7 @@ class TRQ_Backup_Manager {
             ];
         }
 
-        $expected_state = get_transient( 'trq_google_drive_oauth_state_' . $user_id );
-        delete_transient( 'trq_google_drive_oauth_state_' . $user_id );
-
-        if ( ! is_string( $expected_state ) || '' === $expected_state || ! hash_equals( $expected_state, $state ) ) {
+        if ( ! $this->validate_google_drive_oauth_state( $state, $user_id ) ) {
             return [
                 'success' => false,
                 'message' => 'État OAuth invalide. Recommencez la connexion Google Drive.',
@@ -696,10 +693,7 @@ class TRQ_Backup_Manager {
             ];
         }
 
-        $expected_state = get_transient( 'trq_google_drive_oauth_state_' . $user_id );
-        delete_transient( 'trq_google_drive_oauth_state_' . $user_id );
-
-        if ( ! is_string( $expected_state ) || '' === $expected_state || ! hash_equals( $expected_state, $state ) ) {
+        if ( ! $this->validate_google_drive_oauth_state( $state, $user_id ) ) {
             return [
                 'success' => false,
                 'message' => 'État invalide lors du retour du connecteur Google Drive.',
@@ -1541,7 +1535,7 @@ class TRQ_Backup_Manager {
     }
 
     private function create_google_drive_file_with_metadata( string $access_token, array $metadata, string $path ): array {
-        // Utilise l'upload resumable pour eviter de charger tout le fichier en memoire.
+        // Utilise l’upload resumable pour eviter de charger tout le fichier en memoire.
         $file_size = filesize( $path );
         if ( false === $file_size ) {
             return [ 'success' => false, 'message' => 'Impossible de lire la taille du fichier a envoyer.' ];
@@ -1715,7 +1709,7 @@ class TRQ_Backup_Manager {
         }
 
         $state = wp_generate_password( 48, false, false );
-        set_transient( 'trq_google_drive_oauth_state_' . $user_id, $state, 10 * MINUTE_IN_SECONDS );
+        $this->store_google_drive_oauth_state( $state, $user_id );
 
         return [
             'success' => true,
@@ -1745,8 +1739,61 @@ class TRQ_Backup_Manager {
         return is_array( $filtered ) ? array_merge( $client, $filtered ) : $client;
     }
 
+    private function store_google_drive_oauth_state( string $state, int $user_id ): void {
+        if ( '' === $state || $user_id <= 0 ) {
+            return;
+        }
+
+        // Stockage en base de donnees directement (options, pas transients) pour
+        // eviter les evictions de cache objet (Redis/Memcached) qui font echouer
+        // la verification au retour OAuth.
+        $option_key = 'trq_gdrive_state_' . substr( $state, 0, 32 );
+        update_option(
+            $option_key,
+            [
+                'state'      => $state,
+                'user_id'    => $user_id,
+                'expires_at' => time() + 10 * MINUTE_IN_SECONDS,
+            ],
+            false // autoload = false
+        );
+    }
+
+    private function validate_google_drive_oauth_state( string $state, int $user_id ): bool {
+        if ( '' === $state ) {
+            return false;
+        }
+
+        $option_key = 'trq_gdrive_state_' . substr( $state, 0, 32 );
+        $payload    = get_option( $option_key, null );
+        delete_option( $option_key );
+
+        if (
+            is_array( $payload ) &&
+            isset( $payload['state'], $payload['expires_at'] ) &&
+            hash_equals( (string) $payload['state'], $state ) &&
+            time() <= (int) $payload['expires_at']
+        ) {
+            // user_id <= 0 peut arriver dans de rares configs ; on accepte si state valide.
+            return $user_id <= 0 || ! isset( $payload['user_id'] ) || (int) $payload['user_id'] === $user_id;
+        }
+
+        // Compatibilite descendante : ancien format transient par user_id.
+        if ( $user_id > 0 ) {
+            $legacy_key   = 'trq_google_drive_oauth_state_' . $user_id;
+            $legacy_state = get_transient( $legacy_key );
+            delete_transient( $legacy_key );
+            if ( is_string( $legacy_state ) && '' !== $legacy_state && hash_equals( $legacy_state, $state ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function get_google_drive_connector_config(): array {
-        $base_url = defined( 'TRQ_GOOGLE_DRIVE_CONNECTOR_URL' ) ? (string) TRQ_GOOGLE_DRIVE_CONNECTOR_URL : '';
+        $default_url = 'https://yaurel.com/360tranq-gdrive-connector';
+        $base_url = defined( 'TRQ_GOOGLE_DRIVE_CONNECTOR_URL' ) ? (string) TRQ_GOOGLE_DRIVE_CONNECTOR_URL : $default_url;
         $base_url = untrailingslashit( $base_url );
 
         $config = [

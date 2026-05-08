@@ -196,6 +196,11 @@ class TRQ_Admin {
             $class = ! empty( $action_notice['success'] ) ? 'trq-notice-success' : 'trq-notice-error';
             $notice = '<div class="trq-notice ' . esc_attr( $class ) . '">' . esc_html( $action_notice['message'] ) . '</div>';
             delete_transient( 'trq_admin_notice' );
+        } elseif ( isset( $_GET['trq_drive_message'] ) && '' !== $_GET['trq_drive_message'] ) {
+            // Fallback quand le transient n'a pas pu être lu (cache objet externe, etc.).
+            $drive_msg   = sanitize_text_field( wp_unslash( rawurldecode( (string) $_GET['trq_drive_message'] ) ) );
+            $drive_ok    = isset( $_GET['trq_drive_result'] ) && '1' === (string) $_GET['trq_drive_result'];
+            $notice      = '<div class="trq-notice ' . ( $drive_ok ? 'trq-notice-success' : 'trq-notice-error' ) . '">' . esc_html( $drive_msg ) . '</div>';
         } elseif ( isset( $_GET['trq_saved'] ) && $_GET['trq_saved'] === '1' ) {
             $notice = '<div class="trq-notice trq-notice-success">✅ Réglages sauvegardés.</div>';
         } elseif ( isset( $_GET['trq_saved'] ) && $_GET['trq_saved'] === '0' ) {
@@ -1239,7 +1244,17 @@ class TRQ_Admin {
         $result = TRQ_Backup_Manager::get_instance()->complete_google_drive_connector_auth( $code, $state, get_current_user_id() );
         set_transient( 'trq_admin_notice', $result, 60 );
 
-        wp_safe_redirect( admin_url( 'admin.php?page=trq-security&tab=backups' ) );
+        // Fallback : passe aussi le résultat en paramètre URL au cas où le transient
+        // ne serait pas lisible (cache objet externe, environnement multisite, etc.).
+        $redirect = add_query_arg(
+            [
+                'trq_drive_result'  => empty( $result['success'] ) ? '0' : '1',
+                'trq_drive_message' => rawurlencode( (string) ( $result['message'] ?? '' ) ),
+            ],
+            admin_url( 'admin.php?page=trq-security&tab=backups' )
+        );
+
+        wp_safe_redirect( $redirect );
         exit;
     }
 
