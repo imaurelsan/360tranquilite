@@ -217,7 +217,13 @@ class TRQ_Github_Updates {
 
         $cached = get_transient( self::CACHE_TRANSIENT_KEY );
         if ( is_array( $cached ) && ( $cached['repo'] ?? '' ) === $config['repo'] ) {
-            return $cached['data'] ?? [ 'ok' => false ];
+            $cached_version = $cached['data']['version'] ?? '';
+            if ( version_compare( TRQ_VERSION, $cached_version, '>' ) ) {
+                // Invalider le cache si la version actuelle est plus récente que celle en cache
+                delete_transient( self::CACHE_TRANSIENT_KEY );
+            } else {
+                return $cached['data'] ?? [ 'ok' => false ];
+            }
         }
 
         $api_url = sprintf( 'https://api.github.com/repos/%s/releases/latest', rawurlencode( $config['repo'] ) );
@@ -235,16 +241,19 @@ class TRQ_Github_Updates {
         );
 
         if ( is_wp_error( $response ) ) {
+            error_log( 'TRQ_Github_Updates: Erreur lors de la requête API GitHub: ' . $response->get_error_message() );
             return [ 'ok' => false ];
         }
 
         $code = (int) wp_remote_retrieve_response_code( $response );
         if ( 200 !== $code ) {
+            error_log( 'TRQ_Github_Updates: Réponse API GitHub non valide, code HTTP: ' . $code );
             return [ 'ok' => false ];
         }
 
         $payload = json_decode( (string) wp_remote_retrieve_body( $response ), true );
         if ( ! is_array( $payload ) ) {
+            error_log( 'TRQ_Github_Updates: Réponse API GitHub non valide, payload JSON incorrect.' );
             return [ 'ok' => false ];
         }
 

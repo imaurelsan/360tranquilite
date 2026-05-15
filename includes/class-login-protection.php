@@ -111,7 +111,10 @@ class TRQ_Login_Protection {
             }
             status_header( 404 );
             nocache_headers();
-            include get_404_template();
+            $template = get_404_template();
+            if ( ! empty( $template ) ) {
+                include $template;
+            }
             die();
         }
     }
