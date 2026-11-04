@@ -46,6 +46,7 @@ Workflow de release recommandé :
 Script local pour générer le ZIP release (Windows PowerShell) :
 
 ```powershell
+# Compilation pour déploiement en "release github"
 pwsh -File .\scripts\build-release-zip.ps1
 ```
 
