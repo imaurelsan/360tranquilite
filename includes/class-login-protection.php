@@ -37,6 +37,7 @@ class TRQ_Login_Protection {
             add_filter( 'network_site_url',  [ $this, 'filter_network_url'    ], 10, 3 );
             add_filter( 'site_url',          [ $this, 'filter_site_url'       ], 10, 4 );
             add_filter( 'wp_redirect',       [ $this, 'filter_redirect'       ], 10, 2 );
+            add_filter( 'redirect_canonical', [ $this, 'disable_login_canonical_redirect' ], 10, 2 );
             // Flush rewrite si besoin (après activation)
             add_action( 'wp_loaded', [ $this, 'maybe_flush_rewrite' ] );
         }
@@ -95,8 +96,36 @@ class TRQ_Login_Protection {
 
         // Notre slug → on sert wp-login.php
         if ( $request === $slug || $request === ( $slug . '/index.php' ) ) {
-            // Corriger SCRIPT_FILENAME pour que wp-login.php fonctionne
-            $_SERVER['SCRIPT_FILENAME'] = ABSPATH . 'wp-login.php';
+            if (
+                'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) &&
+                isset( $_POST['log'], $_POST['pwd'] ) &&
+                ! isset( $_POST['trq_token'], $_POST['trq_2fa_code'] )
+            ) {
+                $user = wp_signon(
+                    [
+                        'user_login'    => sanitize_user( wp_unslash( $_POST['log'] ) ),
+                        'user_password' => (string) wp_unslash( $_POST['pwd'] ),
+                        'remember'      => ! empty( $_POST['rememberme'] ),
+                    ],
+                    is_ssl()
+                );
+
+                if ( $user instanceof WP_User ) {
+                    $requested_redirect = isset( $_POST['redirect_to'] )
+                        ? esc_url_raw( wp_unslash( $_POST['redirect_to'] ) )
+                        : '';
+                    $redirect = wp_validate_redirect( $requested_redirect, admin_url() );
+                    $redirect = apply_filters( 'login_redirect', $redirect, $requested_redirect, $user );
+                    wp_safe_redirect( $redirect ?: admin_url() );
+                    exit;
+                }
+            }
+
+            // Reproduire le contexte natif de wp-login.php avant son inclusion.
+            $GLOBALS['pagenow']            = 'wp-login.php';
+            $_SERVER['SCRIPT_NAME']        = '/wp-login.php';
+            $_SERVER['PHP_SELF']           = '/wp-login.php';
+            $_SERVER['SCRIPT_FILENAME']    = ABSPATH . 'wp-login.php';
             require_once ABSPATH . 'wp-login.php';
             exit;
         }
@@ -106,6 +135,15 @@ class TRQ_Login_Protection {
             $pagenow === 'wp-login.php' ||
             false !== strpos( $request, 'wp-login.php' )
         ) {
+            // Autoriser uniquement le POST d'authentification venant d'un formulaire
+            // dont l'action n'a pas pu être réécrite par un cache ou une extension.
+            if (
+                'POST' === strtoupper( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) &&
+                isset( $_POST['log'], $_POST['pwd'] )
+            ) {
+                return;
+            }
+
             // Exception : les utilisateurs connectés accédant au back-office
             if ( is_user_logged_in() ) {
                 return;
@@ -152,7 +190,10 @@ class TRQ_Login_Protection {
     public function filter_site_url( string $url, string $path = '', ?string $scheme = null, ?int $blog_id = null ): string {
         unset( $blog_id );
 
-        if ( 'login_post' === $scheme && 'wp-login.php' === trim( $path, '/' ) ) {
+        if (
+            'login_post' === $scheme &&
+            false !== strpos( trim( $path, '/' ), 'wp-login.php' )
+        ) {
             return home_url( $this->get_slug() );
         }
 
@@ -164,6 +205,20 @@ class TRQ_Login_Protection {
             return $this->swap_login_url( $location );
         }
         return $location;
+    }
+
+    public function disable_login_canonical_redirect( $redirect_url, $requested_url ) {
+        unset( $requested_url );
+
+        $request_path = trim( (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ), PHP_URL_PATH ), '/' );
+        $home_path    = trim( (string) wp_parse_url( home_url(), PHP_URL_PATH ), '/' );
+        $slug         = $this->get_slug();
+
+        if ( $home_path && 0 === strpos( $request_path, $home_path ) ) {
+            $request_path = trim( substr( $request_path, strlen( $home_path ) ), '/' );
+        }
+
+        return $request_path === $slug ? false : $redirect_url;
     }
 
     private function swap_login_url( string $url ): string {

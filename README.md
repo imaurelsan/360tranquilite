@@ -52,6 +52,14 @@ pwsh -File .\scripts\build-release-zip.ps1
 
 Le script produit `dist/360tranquilite.zip` avec une structure WordPress correcte.
 
+Pour lancer la génération par double-clic sous Windows, exécutez :
+
+```text
+scripts\build-release-zip.bat
+```
+
+Le fichier `.bat` utilise PowerShell 7 (`pwsh`) s'il est disponible, sinon PowerShell Windows intégré.
+
 Process de deploiement prive vers public (commandes terminal + checklist fusionnee):
 
 - voir `docs/GUIDE_SYNC_PRIVATE_TO_PUBLIC.md`

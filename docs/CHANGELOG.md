@@ -2,6 +2,18 @@
 
 Toutes les évolutions notables de 360 Tranquillité seront documentées dans ce fichier.
 
+## 1.10.18 - 2026-11-04
+- Connexion: désactivation de la redirection canonique WordPress sur le slug personnalisé pour éviter l'ajout de paramètres parasites
+
+## 1.10.17 - 2026-11-04
+- Connexion: restauration du contexte natif de `wp-login.php` avant son inclusion depuis le slug personnalisé
+
+## 1.10.16 - 2026-11-04
+- Connexion: traitement explicite du POST du slug personnalisé via `wp_signon()` avant le chargement de `wp-login.php`
+
+## 1.10.15 - 2026-11-04
+- Connexion: le formulaire de connexion utilise le slug personnalisé et les POST d'authentification restent traités par WordPress sans réouvrir l'accès direct à `wp-login.php`
+
 ## 1.10.12 - 2026-05-07
 - Bugfix sauvegardes: l'archive n'était pas conservée lorsque le stockage local était désactivé (Drive uniquement) et que WP_Filesystem() échouait en contexte cron — repli sur rename() natif + RuntimeException explicite si aucune destination n'est joignable
 - Bugfix sauvegardes: suppression d'un appel filesize() sur un fichier déjà supprimé (PHP warning silencieux)
