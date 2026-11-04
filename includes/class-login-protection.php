@@ -35,6 +35,7 @@ class TRQ_Login_Protection {
             add_filter( 'logout_url',        [ $this, 'filter_logout_url'     ], 10, 2 );
             add_filter( 'lostpassword_url',  [ $this, 'filter_lostpass_url'   ], 10, 2 );
             add_filter( 'network_site_url',  [ $this, 'filter_network_url'    ], 10, 3 );
+            add_filter( 'site_url',          [ $this, 'filter_site_url'       ], 10, 4 );
             add_filter( 'wp_redirect',       [ $this, 'filter_redirect'       ], 10, 2 );
             // Flush rewrite si besoin (après activation)
             add_action( 'wp_loaded', [ $this, 'maybe_flush_rewrite' ] );
@@ -141,6 +142,20 @@ class TRQ_Login_Protection {
         if ( false !== strpos( $url, 'wp-login.php' ) ) {
             return $this->swap_login_url( $url );
         }
+        return $url;
+    }
+
+    /**
+     * Le formulaire natif de WordPress utilise site_url(..., 'login_post')
+     * directement au lieu de passer par wp_login_url().
+     */
+    public function filter_site_url( string $url, string $path = '', ?string $scheme = null, ?int $blog_id = null ): string {
+        unset( $blog_id );
+
+        if ( 'login_post' === $scheme && 'wp-login.php' === trim( $path, '/' ) ) {
+            return home_url( $this->get_slug() );
+        }
+
         return $url;
     }
 
